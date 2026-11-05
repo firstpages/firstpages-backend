@@ -1,0 +1,74 @@
+name: firstpages
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: firstpages-mysql
+    restart: unless-stopped
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_0900_ai_ci"
+    environment:
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD-SHELL", 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysql -h 127.0.0.1 -u root -e "SELECT 1"' ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - firstpages-network
+
+  redis:
+    image: redis:7.4
+    container_name: firstpages-redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+    command:
+      - "/bin/sh"
+      - "-c"
+      - 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD-SHELL", 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG' ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - firstpages-network
+
+  flyway:
+    image: flyway/flyway:11
+    container_name: firstpages-flyway
+    environment:
+      FLYWAY_URL: "jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&sslMode=DISABLED"
+      FLYWAY_USER: "${DB_USERNAME}"
+      FLYWAY_PASSWORD: "${DB_PASSWORD}"
+      FLYWAY_CONNECT_RETRIES: "60"
+    command: migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - firstpages-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  firstpages-network:
+    driver: bridge

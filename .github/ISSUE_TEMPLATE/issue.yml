@@ -1,0 +1,60 @@
+
+name: '이슈 생성'
+description: '새로운 개발 작업을 등록하고 관리합니다.'
+title: '이슈 제목을 작성해 주세요'
+assignees: []
+
+body:
+  - type: dropdown
+    id: issueType
+    attributes:
+      label: '🏷️ 작업 유형'
+      description: '작업의 성격에 맞는 유형을 선택해 주세요. 이슈 생성 후 동일한 GitHub Label을 지정해 주세요.'
+      options:
+        - feat
+        - fix
+        - docs
+        - style
+        - refactor
+        - test
+        - chore
+        - design
+        - comment
+        - rename
+        - remove
+        - release
+        - '!HOTFIX'
+    validations:
+      required: true
+
+  - type: input
+    id: branchSuffix
+    attributes:
+      label: '🌿 브랜치 식별자'
+      description: 'feature 브랜치 이름에 사용할 영문 식별자를 작성해 주세요. 소문자와 하이픈(-) 사용을 권장합니다.'
+      placeholder: '예: login-api'
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: '📝 상세 내용'
+      description: '개발할 기능이나 해결할 문제를 구체적으로 설명해 주세요.'
+      placeholder: |
+        사용자가 이메일과 비밀번호를 이용해
+        로그인할 수 있도록 인증 API를 구현합니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: '✅ 체크리스트'
+      description: '작업을 완료하기 위해 수행해야 할 세부 항목을 작성해 주세요.'
+      value: |
+        - [ ] 
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true

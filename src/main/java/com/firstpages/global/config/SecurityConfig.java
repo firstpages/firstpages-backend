@@ -1,6 +1,10 @@
 package com.firstpages.global.config;
 
-import lombok.RequiredArgsConstructor;
+import com.firstpages.global.security.SecurityErrorResponseWriter;
+import com.firstpages.global.security.jwt.JwtAccessDeniedHandler;
+import com.firstpages.global.security.jwt.JwtAuthenticationEntryPoint;
+import com.firstpages.global.security.jwt.JwtAuthenticationFilter;
+import com.firstpages.global.security.jwt.JwtProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +17,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
@@ -20,11 +25,21 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtProvider jwtProvider,
+            SecurityErrorResponseWriter responseWriter,
+            JwtAuthenticationEntryPoint authenticationEntryPoint,
+            JwtAccessDeniedHandler accessDeniedHandler
+    ) throws Exception {
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(
+                jwtProvider,
+                responseWriter
+        );
+
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
@@ -51,11 +66,16 @@ public class SecurityConfig {
                         .authenticated()
                 )
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(
-                                new HttpStatusEntryPoint(
-                                        HttpStatus.UNAUTHORIZED
-                                )
-                        )
+                        // 401 처리
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        // 403 처리
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
+                // Spring Security 필터 체인에 JWT 인증 필터를 등록
+                // UsernamePasswordAuthenticationFilter보다 앞에서 실행되도록 순서를 지정
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
 
         return http.build();

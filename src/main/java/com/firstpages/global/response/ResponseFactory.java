@@ -1,6 +1,5 @@
 package com.firstpages.global.response;
 
-import com.firstpages.global.response.code.CommonSuccessCode;
 import com.firstpages.global.response.code.ErrorResponseCode;
 import com.firstpages.global.response.code.SuccessResponseCode;
 import lombok.AccessLevel;

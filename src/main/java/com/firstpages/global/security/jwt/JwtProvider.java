@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -49,10 +50,13 @@ public class JwtProvider {
     ) {
         // 현재 시점
         Instant now = Instant.now();
+
         // 현재 시점 기준 만료 시각
         Instant expiration = now.plusMillis(expirationMillis);
 
         return Jwts.builder()
+                // 토큰마다 고유한 식별자 생성
+                .id(UUID.randomUUID().toString())
                 // 토큰의 주인
                 .subject(userId.toString())
                 // 토큰 타입 클레임

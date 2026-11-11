@@ -14,6 +14,42 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD}
 
+  security:
+    oauth2:
+      client:
+        # 우리 서비스의 등록 정보
+        registration:
+          kakao:
+            # Spring Security 내부에서 사용하는 registrationId
+            provider: kakao
+            # 클라이언트 등록 정보를 표시할 때 사용하는 이름
+            client-name: Kakao
+            # 카카오가 애플리케이션을 식별하는 데 사용하는 값
+            client-id: ${KAKAO_CLIENT_ID}
+            # OAuth2 클라이언트가 토큰을 요청할 때 클라이언트 정보를 전달하는 방법을 결정
+            client-authentication-method: client_secret_post
+            # 카카오에서 발급한 클라이언트 시크릿
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            # 카카오 로그인을 완료한 후 리다이렉트할 주소
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            # OAuth2에서 어떤 인증 흐름을 사용할지 지정
+            authorization-grant-type: authorization_code
+            # 제공 받을 항목
+            scope:
+              - profile_nickname
+
+        # 카카오 서버 정보
+        provider:
+          kakao:
+            # 사용자에게 카카오 로그인 및 동의 화면을 제공하는 인증 엔드포인트
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            # 카카오에서 받은 인가 코드를 카카오 Access Token으로 교환하는 API 주소
+            token-uri: https://kauth.kakao.com/oauth/token
+            # 카카오 Access Token을 사용해 사용자 정보를 조회하는 API 주소
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            # 카카오의 사용자 정보 응답에서 어떤 필드를 사용자를 구분하는 식별 속성으로 사용할지 지정
+            user-name-attribute: id
+
 jwt:
   secret: ${JWT_SECRET}
   access-expiration: ${JWT_ACCESS_EXPIRATION:1800000}
@@ -40,3 +76,9 @@ logging:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+  oauth2:
+    success-redirect-uri: ${OAUTH2_SUCCESS_REDIRECT_URI:http://localhost:5173/auth/callback}
+    failure-redirect-uri: ${OAUTH2_FAILURE_REDIRECT_URI:http://localhost:5173/login}
+    # 운영 환경에서는 HTTPS를 사용하고 AUTH_COOKIE_SECURE=true로 설정
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}

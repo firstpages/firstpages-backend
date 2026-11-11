@@ -48,21 +48,40 @@ public class User {
 
     private User(
             SocialProvider provider,
-            String providerId
+            String providerId,
+            String nickname
     ) {
         this.provider = provider;
         this.providerId = providerId;
+        this.nickname = nickname;
     }
 
-    // 소셜 로그인 사용자 생성
+    // 기존 사용자 생성 방식과의 호환성 유지
     public static User create(
             SocialProvider provider,
             String providerId
     ) {
-        return new User(provider, providerId);
+        return new User(
+                provider,
+                providerId,
+                null
+        );
     }
 
-    // 닉네임 변경
+    // 닉네임을 포함한 사용자 생성
+    public static User create(
+            SocialProvider provider,
+            String providerId,
+            String nickname
+    ) {
+        return new User(
+                provider,
+                providerId,
+                nickname
+        );
+    }
+
+    // 사용자 닉네임 변경
     public void updateNickname(String nickname) {
         this.nickname = nickname;
     }

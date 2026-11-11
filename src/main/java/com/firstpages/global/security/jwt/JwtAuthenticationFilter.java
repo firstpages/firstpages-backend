@@ -4,8 +4,10 @@ package com.firstpages.global.security.jwt;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.response.code.JwtErrorCode;
 import com.firstpages.global.security.SecurityErrorResponseWriter;
+import com.firstpages.global.security.oauth2.OAuth2CookieManager;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +21,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+// Access Token 쿠키를 검증하여 사용자를 인증하는 필터
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final String BEARER_PREFIX = "Bearer ";
+    public static final String AUTH_REISSUE = "/api/auth/reissue";
+
+    public static final String AUTH_LOGOUT = "/api/auth/logout";
 
     private final JwtProvider jwtProvider;
+
     private final SecurityErrorResponseWriter responseWriter;
 
     @Override
@@ -34,48 +40,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // HTTP 헤더의 Authorization 키의 값을 추출(Bearer eyJhbGciOiJIUzI1NiJ9...)
-        String authorization = request.getHeader(
-                HttpHeaders.AUTHORIZATION
-        );
+        // 요청에 포함된 쿠키에서 Access Token 추출
+        String token = resolveAccessToken(request);
 
-        // Authorization 헤더가 없으면 다음 필터로 전달
-        if (authorization == null || authorization.isBlank()) {
-            // 일단 다음 필터로 요청과 응답을 전달
+        // 인증 쿠키가 없어도 공개 API는 접근 가능하도록 설정
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Bearer 형식이 아니면 인증 실패
-        if (!authorization.startsWith(BEARER_PREFIX)) {
-            responseWriter.write(
-                    response,
-                    JwtErrorCode.INVALID_TOKEN
-            );
-
-            return;
-        }
-
-        // "Bearer " 문자열을 제거하여 JWT만 추출
-        String token = authorization.substring(BEARER_PREFIX.length());
-
-        if (token.isBlank()) {
-            responseWriter.write(
-                    response,
-                    JwtErrorCode.INVALID_TOKEN
-            );
-
-            return;
-        }
-
-        Long userId;
-
         try {
-            userId = jwtProvider.getUserId(
+            // JWT 서명, 만료시간, 토큰 유형을 검증
+            Long userId = jwtProvider.getUserId(
                     token,
                     JwtTokenType.ACCESS
             );
+
+            // 인증 객체 생성
+            // Spring Security는 Authentication 객체를 통해 인증 상태를 관리
+            UsernamePasswordAuthenticationToken authentication = UsernamePasswordAuthenticationToken.authenticated(
+                    userId,
+                    null,
+                    Collections.emptyList()
+            );
+
+            // 인증 정보를 저장할 새로운 SecurityContext 생성
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+
+            context.setAuthentication(authentication);
+
+            SecurityContextHolder.setContext(context);
+
         } catch (BusinessException e) {
+
+            // 유효하지 않은 JWT의 인증 정보가 남지 않도록 정리
             SecurityContextHolder.clearContext();
 
             responseWriter.write(
@@ -86,23 +84,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 인증 객체 생성
-        // Spring Security는 Authentication 객체를 통해 인증 상태를 관리
-        Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
-                userId,
-                null,
-                Collections.emptyList()
-        );
-
-        // 인증 정보를 저장할 새로운 SecurityContext 생성
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-
-        // 인증 객체 저장
-        context.setAuthentication(authentication);
-
-        SecurityContextHolder.setContext(context);
-
-        // 다음 필터로 전달
+        // 인증 객체가 등록된 상태로 다음 보안 필터 실행
         filterChain.doFilter(request, response);
+    }
+
+    // Access Token 없이 처리해야 하는 인증 API는 JWT 필터 생략
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        return AUTH_REISSUE.equals(path) || AUTH_LOGOUT.equals(path);
+    }
+
+    // HTTP 요청에 포함된 쿠키에서 Access Token을 추출
+    private String resolveAccessToken(HttpServletRequest request) {
+        // 요청 쿠키 배열을 반환
+        Cookie[] cookies = request.getCookies();
+
+        // 쿠키가 비어있을 때
+        if (cookies == null) {
+            return null;
+        }
+
+        for (Cookie cookie : cookies) {
+            if (OAuth2CookieManager.ACCESS_TOKEN.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+
+        // Access Token을 추출할 수 없을 때
+        return null;
     }
 }

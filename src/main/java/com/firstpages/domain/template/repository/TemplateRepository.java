@@ -20,12 +20,6 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
     // 선택 가능한 템플릿 목록 페이징 조회
     Page<Template> findBySelectableTrue(Pageable pageable);
 
-    // 카테고리별 선택 가능한 템플릿 전체 조회
-    List<Template> findByCategoryAndSelectableTrue(String category);
-
-    // 카테고리별 선택 가능한 템플릿 목록 페이징 조회
-    Page<Template> findByCategoryAndSelectableTrue(
-            String category,
-            Pageable pageable
-    );
+    // 선택 가능한 템플릿 전체를 ID 오름차순으로 조회
+    List<Template> findAllBySelectableTrueOrderByIdAsc();
 }

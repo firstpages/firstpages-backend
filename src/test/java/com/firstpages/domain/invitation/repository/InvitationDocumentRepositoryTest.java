@@ -1,8 +1,7 @@
 
 package com.firstpages.domain.invitation.repository;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import com.firstpages.domain.invitation.entity.Invitation;
 import com.firstpages.domain.invitation.entity.InvitationDocument;
 import com.firstpages.domain.invitation.entity.InvitationDocumentKind;
@@ -17,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;

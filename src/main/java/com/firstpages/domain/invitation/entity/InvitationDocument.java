@@ -1,7 +1,7 @@
 
 package com.firstpages.domain.invitation.entity;
 
-import com.fasterxml.jackson.databind.JsonNode;
+
 import com.firstpages.domain.template.entity.Template;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -12,6 +12,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import tools.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
 

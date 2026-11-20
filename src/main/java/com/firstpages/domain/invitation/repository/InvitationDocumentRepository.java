@@ -5,6 +5,8 @@ import com.firstpages.domain.invitation.entity.InvitationDocumentKind;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,27 +14,41 @@ import java.util.Optional;
 // 청첩장 작성본과 공개본의 데이터 접근을 담당하는 리포지토리
 public interface InvitationDocumentRepository extends JpaRepository<InvitationDocument, Long> {
 
-    // 청첩장 ID와 문서 종류로 청첩장 문서 조회
+    // 청첩장 ID와 문서 종류로 문서 한 건을 조회
     Optional<InvitationDocument> findByInvitationIdAndKind(
             Long invitationId,
             InvitationDocumentKind kind
     );
 
-    // 특정 청첩장의 모든 문서 조회 (페이징 없음)
+    // 특정 청첩장에 속한 작성본과 공개본을 조회
     List<InvitationDocument> findByInvitationId(Long invitationId);
 
-    // 특정 청첩장의 모든 문서 페이징 조회
-    Page<InvitationDocument> findByInvitationId(
-            Long invitationId,
-            Pageable pageable
+    // 로그인 사용자의 청첩장 작성본 목록 및 연관 엔티티 조회
+    @Query("""
+            select document
+            from InvitationDocument document
+            join fetch document.invitation invitation
+            join fetch document.template template
+            where invitation.owner.id = :ownerId
+                and document.kind = com.firstpages.domain.invitation.entity.InvitationDocumentKind.DRAFT
+            order by document.updatedAt desc, document.id asc
+            """)
+    List<InvitationDocument> findAllDraftsByOwnerId(
+            @Param("ownerId") Long ownerId
     );
 
-    // 문서 종류별 전체 목록 조회 (페이징 없음)
-    List<InvitationDocument> findByKind(InvitationDocumentKind kind);
-
-    // 문서 종류별 전체 목록 페이징 조회
-    Page<InvitationDocument> findByKind(
-            InvitationDocumentKind kind,
-            Pageable pageable
+    // 청첩장 ID와 소유자 ID가 일치하는 작성본과 연관 엔티티를 조회
+    @Query("""
+            select document
+            from InvitationDocument document
+            join fetch document.invitation invitation
+            join fetch document.template template
+            where invitation.id = :invitationId
+                and invitation.owner.id = :ownerId
+                and document.kind = com.firstpages.domain.invitation.entity.InvitationDocumentKind.DRAFT
+            """)
+    Optional<InvitationDocument> findDraftByInvitationIdAndOwnerId(
+            @Param("invitationId") Long invitationId,
+            @Param("ownerId") Long ownerId
     );
 }

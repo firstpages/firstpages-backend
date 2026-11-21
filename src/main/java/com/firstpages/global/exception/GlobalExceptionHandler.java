@@ -3,7 +3,10 @@ package com.firstpages.global.exception;
 import com.firstpages.global.response.ApiResponse;
 import com.firstpages.global.response.ResponseFactory;
 import com.firstpages.global.response.code.CommonErrorCode;
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,8 +24,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(
             BusinessException e
     ) {
-        log.warn("Business exception: code={}",
-                e.getErrorCode().getCode());
+        log.warn("Business exception: code={}", e.getErrorCode().getCode());
 
         return ResponseFactory.failure(
                 e.getErrorCode(),
@@ -39,11 +41,10 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .stream()
                 .findFirst()
-                .map(error -> error.getDefaultMessage())
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .orElse(CommonErrorCode.INVALID_INPUT.getMessage());
 
-        log.warn("Validation failed: count={}",
-                e.getBindingResult().getErrorCount());
+        log.warn("Validation failed: count={}", e.getBindingResult().getErrorCount());
 
         return ResponseFactory.failure(
                 CommonErrorCode.INVALID_INPUT,
@@ -80,11 +81,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMissingParameter(
             MissingServletRequestParameterException e
     ) {
-        log.warn("Missing parameter: name={}",
-                e.getParameterName());
+        log.warn("Missing parameter: name={}", e.getParameterName());
 
         return ResponseFactory.failure(
                 CommonErrorCode.MISSING_PARAMETER
+        );
+    }
+
+    // 저장 또는 커밋 과정에서 발생한 낙관적 락 충돌 처리
+    @ExceptionHandler({
+            OptimisticLockException.class,
+            OptimisticLockingFailureException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLockException(
+            Exception e
+    ) {
+        log.warn("Optimistic lock conflict: type={}", e.getClass().getSimpleName());
+
+        return ResponseFactory.failure(
+                CommonErrorCode.VERSION_CONFLICT
         );
     }
 

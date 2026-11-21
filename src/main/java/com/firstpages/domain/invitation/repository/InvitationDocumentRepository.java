@@ -14,7 +14,7 @@ import java.util.Optional;
 // 청첩장 작성본과 공개본의 데이터 접근을 담당하는 리포지토리
 public interface InvitationDocumentRepository extends JpaRepository<InvitationDocument, Long> {
 
-    // 청첩장 ID와 문서 종류로 문서 한 건을 조회
+    // 청첩장 ID와 문서 종류로 문서를 조회
     Optional<InvitationDocument> findByInvitationIdAndKind(
             Long invitationId,
             InvitationDocumentKind kind

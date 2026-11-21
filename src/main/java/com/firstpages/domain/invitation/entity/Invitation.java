@@ -58,6 +58,10 @@ public class Invitation {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // 마지막으로 공개본을 반영한 시각
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
     // 생성자
     private Invitation(
             User owner,
@@ -87,4 +91,9 @@ public class Invitation {
         this.managementTitle = newManagementTitle;
     }
 
+    // 공개 상태와 마지막 공개 시각을 갱신
+    public void publish() {
+        this.status = InvitationStatus.PUBLISHED;
+        this.publishedAt = LocalDateTime.now();
+    }
 }

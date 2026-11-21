@@ -1,11 +1,9 @@
 package com.firstpages.domain.invitation.service;
 
 import com.firstpages.domain.invitation.dto.request.InvitationCreateRequestDto;
+import com.firstpages.domain.invitation.dto.request.InvitationPublishRequestDto;
 import com.firstpages.domain.invitation.dto.request.InvitationUpdateRequestDto;
-import com.firstpages.domain.invitation.dto.response.InvitationCreateResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationDetailResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationListResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationUpdateResponseDto;
+import com.firstpages.domain.invitation.dto.response.*;
 import com.firstpages.domain.invitation.entity.Invitation;
 import com.firstpages.domain.invitation.entity.InvitationDocument;
 import com.firstpages.domain.invitation.entity.InvitationDocumentKind;
@@ -23,8 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 // 청첩장 생성과 관리용 조회의 비즈니스 로직을 처리
@@ -185,5 +185,79 @@ public class InvitationServiceImpl implements InvitationService {
         ));
 
         return InvitationUpdateResponseDto.from(invitation);
+    }
+
+    // 소유권과 버전을 확인하고 작성본을 공개본에 반영
+    @Transactional
+    @Override
+    public void publish(
+            Long userId,
+            Long invitationId,
+            InvitationPublishRequestDto requestDto
+    ) {
+        // 소유한 청첩장의 부모 행을 잠금
+        Invitation invitation = invitationRepository.findByOwnerIdAndIdForUpdate(
+                        userId,
+                        invitationId
+                )
+                .orElseThrow(() -> new BusinessException(
+                        InvitationErrorCode.INVITATION_NOT_FOUND
+                ));
+
+        // 잠금을 얻은 뒤 요청 버전과 현재 버전을 비교
+        if (!Objects.equals(
+                requestDto.getVersion(),
+                invitation.getVersion()
+        )) {
+            throw new BusinessException(
+                    InvitationErrorCode.INVITATION_VERSION_CONFLICT
+            );
+        }
+
+        // 공개에 사용할 저장된 작성본을 조회
+        InvitationDocument draft = invitationDocumentRepository.findByInvitationIdAndKind(
+                        invitationId,
+                        InvitationDocumentKind.DRAFT
+                )
+                .orElseThrow(() -> new BusinessException(
+                        InvitationErrorCode.INVITATION_DRAFT_NOT_FOUND
+                ));
+
+        // 공개본이 있으면 본문을 갱신하고 없으면 작성본을 복사해 생성
+        invitationDocumentRepository.findByInvitationIdAndKind(
+                        invitationId,
+                        InvitationDocumentKind.PUBLISHED
+                )
+                .ifPresentOrElse(
+                        published -> published.updateBody(draft.getBody()),
+                        () -> invitationDocumentRepository.save(
+                                InvitationDocument.create(
+                                        invitation,
+                                        InvitationDocumentKind.PUBLISHED,
+                                        draft.getTemplate(),
+                                        draft.getBody()
+                                )
+                        )
+                );
+
+        // 공개 상태와 마지막 공개 시각을 갱신
+        invitation.publish();
+    }
+
+    // 현재 청첩장의 공개 상태와 버전을 조회
+    @Override
+    public InvitationPublishResponseDto getPublishResult(
+            Long userId,
+            Long invitationId
+    ) {
+        Invitation invitation = invitationRepository.findByOwnerIdAndId(
+                        userId,
+                        invitationId
+                )
+                .orElseThrow(() -> new BusinessException(
+                        InvitationErrorCode.INVITATION_NOT_FOUND
+                ));
+
+        return InvitationPublishResponseDto.from(invitation);
     }
 }

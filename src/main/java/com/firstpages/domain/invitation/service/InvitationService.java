@@ -1,11 +1,9 @@
 package com.firstpages.domain.invitation.service;
 
 import com.firstpages.domain.invitation.dto.request.InvitationCreateRequestDto;
+import com.firstpages.domain.invitation.dto.request.InvitationPublishRequestDto;
 import com.firstpages.domain.invitation.dto.request.InvitationUpdateRequestDto;
-import com.firstpages.domain.invitation.dto.response.InvitationCreateResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationDetailResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationListResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationUpdateResponseDto;
+import com.firstpages.domain.invitation.dto.response.*;
 
 import java.util.List;
 
@@ -38,6 +36,19 @@ public interface InvitationService {
 
     // 소유한 청첩장의 ID와 현재 버전 조회
     InvitationUpdateResponseDto getUpdateResult(
+            Long userId,
+            Long invitationId
+    );
+
+    // 소유한 청첩장의 작성본을 공개본에 반영
+    void publish(
+            Long userId,
+            Long invitationId,
+            InvitationPublishRequestDto requestDto
+    );
+
+    // 소유한 청첩장의 현재 공개 결과를 조회
+    InvitationPublishResponseDto getPublishResult(
             Long userId,
             Long invitationId
     );

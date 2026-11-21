@@ -1,11 +1,9 @@
 package com.firstpages.domain.invitation.controller;
 
 import com.firstpages.domain.invitation.dto.request.InvitationCreateRequestDto;
+import com.firstpages.domain.invitation.dto.request.InvitationPublishRequestDto;
 import com.firstpages.domain.invitation.dto.request.InvitationUpdateRequestDto;
-import com.firstpages.domain.invitation.dto.response.InvitationCreateResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationDetailResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationListResponseDto;
-import com.firstpages.domain.invitation.dto.response.InvitationUpdateResponseDto;
+import com.firstpages.domain.invitation.dto.response.*;
 import com.firstpages.domain.invitation.service.InvitationService;
 import com.firstpages.global.response.ApiResponse;
 import com.firstpages.global.response.ResponseFactory;
@@ -85,6 +83,33 @@ public class InvitationController {
         );
 
         InvitationUpdateResponseDto responseDto = invitationService.getUpdateResult(
+                userId,
+                invitationId
+        );
+
+        return ResponseFactory.success(
+                CommonSuccessCode.OK,
+                responseDto
+        );
+    }
+
+    // 청첩장 공개 요청을 처리하고 현재 공개 결과를 반환
+    @PostMapping("/{invitationId}/publish")
+    public ResponseEntity<ApiResponse<InvitationPublishResponseDto>> publish(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long invitationId,
+            @Valid @RequestBody InvitationPublishRequestDto requestDto
+    ) {
+        // 공개본과 부모 청첩장의 변경을 같은 트랜잭션에서 커밋
+        // 작성본을 공개본으로 전환
+        invitationService.publish(
+                userId,
+                invitationId,
+                requestDto
+        );
+
+        // 커밋 이후 조회한 공개본 결과
+        InvitationPublishResponseDto responseDto = invitationService.getPublishResult(
                 userId,
                 invitationId
         );

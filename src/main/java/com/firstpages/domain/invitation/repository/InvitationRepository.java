@@ -49,4 +49,17 @@ public interface InvitationRepository extends JpaRepository<Invitation, Long> {
             @Param("invitationId") Long invitationId,
             @Param("ownerId") Long ownerId
     );
+
+    // 소유한 청첩장의 부모 행을 잠가 동시 공개 요청을 순서대로 처리
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select invitation
+        from Invitation invitation
+        where invitation.owner.id = :ownerId
+          and invitation.id = :invitationId
+        """)
+    Optional<Invitation> findByOwnerIdAndIdForUpdate(
+            @Param("ownerId") Long ownerId,
+            @Param("invitationId") Long invitationId
+    );
 }

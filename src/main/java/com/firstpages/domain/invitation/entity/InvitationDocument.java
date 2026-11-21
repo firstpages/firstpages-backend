@@ -98,6 +98,6 @@ public class InvitationDocument {
 
     // 전달받은 전체 JSON을 복사하여 청첩장 작성본을 변경
     public void updateBody(JsonNode body) {
-        this.body = body;
+        this.body = body.deepCopy();
     }
 }

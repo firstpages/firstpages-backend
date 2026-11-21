@@ -30,6 +30,20 @@ public enum InvitationErrorCode implements ErrorResponseCode {
             HttpStatus.NOT_FOUND,
             "INVITATION_DRAFT_NOT_FOUND",
             "청첩장 작성본을 찾을 수 없습니다."
+    ),
+
+    // 다른 요청에서 먼저 수정하여 청첩장 버전이 일치하지 않음
+    INVITATION_VERSION_CONFLICT(
+            HttpStatus.CONFLICT,
+            "INVITATION_VERSION_CONFLICT",
+            "다른 요청에서 청첩장이 수정되었습니다. 새로고침 후 다시 시도해 주세요."
+    ),
+
+    // 청첩장 작성본의 JSON 구조 또는 필드 값이 올바르지 않음
+    INVITATION_INVALID_BODY(
+            HttpStatus.BAD_REQUEST,
+            "INVITATION_INVALID_BODY",
+            "청첩장 작성본 형식이 올바르지 않습니다."
     );
 
     // HTTP 응답 상태

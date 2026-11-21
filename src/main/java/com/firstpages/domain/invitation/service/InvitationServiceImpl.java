@@ -1,9 +1,11 @@
 package com.firstpages.domain.invitation.service;
 
 import com.firstpages.domain.invitation.dto.request.InvitationCreateRequestDto;
+import com.firstpages.domain.invitation.dto.request.InvitationUpdateRequestDto;
 import com.firstpages.domain.invitation.dto.response.InvitationCreateResponseDto;
 import com.firstpages.domain.invitation.dto.response.InvitationDetailResponseDto;
 import com.firstpages.domain.invitation.dto.response.InvitationListResponseDto;
+import com.firstpages.domain.invitation.dto.response.InvitationUpdateResponseDto;
 import com.firstpages.domain.invitation.entity.Invitation;
 import com.firstpages.domain.invitation.entity.InvitationDocument;
 import com.firstpages.domain.invitation.entity.InvitationDocumentKind;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 // 청첩장 생성과 관리용 조회의 비즈니스 로직을 처리
@@ -123,4 +126,64 @@ public class InvitationServiceImpl implements InvitationService {
         return InvitationDetailResponseDto.from(draft);
     }
 
+    // 소유권과 버전을 확인하고 청첩장 제목 및 작성본을 함께 저장
+    @Transactional
+    @Override
+    public void update(
+            Long userId,
+            Long invitationId,
+            InvitationUpdateRequestDto requestDto
+    ) {
+        // 작성본은 JSON 객체만 허용
+        if (requestDto.getBody() == null || !requestDto.getBody().isObject()) {
+            throw new BusinessException(
+                    InvitationErrorCode.INVITATION_INVALID_BODY
+            );
+        }
+
+        // 소유자의 청첩장을 조회하면서 부모의 낙관적 락 적용
+        Invitation invitation = invitationRepository.findByIdAndOwnerIdWithOptimisticLock(invitationId, userId)
+                .orElseThrow(() -> new BusinessException(
+                        InvitationErrorCode.INVITATION_NOT_FOUND
+                ));
+
+        // 요청에 담긴 버전과 현재 DB에서 조회한 버전이 다르면 예외 발생
+        if (!Objects.equals(
+                // 사용자가 가지고 있던 과거 버전
+                requestDto.getVersion(),
+                // 디비 조회로 가지고 온 최신 버전
+                invitation.getVersion()
+        )) {
+            throw new BusinessException(
+                    InvitationErrorCode.INVITATION_VERSION_CONFLICT
+            );
+        }
+
+        // 소유권이 확인된 청첩장의 작성본 조회
+        InvitationDocument document = invitationDocumentRepository.findByInvitationIdAndKind(invitationId, InvitationDocumentKind.DRAFT)
+                .orElseThrow(() -> new BusinessException(
+                        InvitationErrorCode.INVITATION_DRAFT_NOT_FOUND
+                ));
+
+        // 관리용 제목 변경
+        invitation.updateManagementTitle(requestDto.getManagementTitle());
+
+        // 전체 작성본 JSON 변경
+        document.updateBody(requestDto.getBody());
+    }
+
+    @Override
+    public InvitationUpdateResponseDto getUpdateResult(
+            Long userId,
+            Long invitationId
+    ) {
+        Invitation invitation = invitationRepository.findByOwnerIdAndId(
+                userId,
+                invitationId
+        ).orElseThrow(() -> new BusinessException(
+                InvitationErrorCode.INVITATION_NOT_FOUND
+        ));
+
+        return InvitationUpdateResponseDto.from(invitation);
+    }
 }

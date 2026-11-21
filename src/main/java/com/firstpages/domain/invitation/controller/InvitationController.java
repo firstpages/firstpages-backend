@@ -1,9 +1,11 @@
 package com.firstpages.domain.invitation.controller;
 
 import com.firstpages.domain.invitation.dto.request.InvitationCreateRequestDto;
+import com.firstpages.domain.invitation.dto.request.InvitationUpdateRequestDto;
 import com.firstpages.domain.invitation.dto.response.InvitationCreateResponseDto;
 import com.firstpages.domain.invitation.dto.response.InvitationDetailResponseDto;
 import com.firstpages.domain.invitation.dto.response.InvitationListResponseDto;
+import com.firstpages.domain.invitation.dto.response.InvitationUpdateResponseDto;
 import com.firstpages.domain.invitation.service.InvitationService;
 import com.firstpages.global.response.ApiResponse;
 import com.firstpages.global.response.ResponseFactory;
@@ -58,6 +60,31 @@ public class InvitationController {
             @PathVariable Long invitationId
     ) {
         InvitationDetailResponseDto responseDto = invitationService.getDetail(
+                userId,
+                invitationId
+        );
+
+        return ResponseFactory.success(
+                CommonSuccessCode.OK,
+                responseDto
+        );
+    }
+
+    // 작성본 저장 후 청첩장 ID와 현재 버전을 조회하여 반환
+    @PutMapping("/{invitationId}")
+    public ResponseEntity<ApiResponse<InvitationUpdateResponseDto>> update(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long invitationId,
+            @Valid @RequestBody InvitationUpdateRequestDto requestDto
+    ) {
+        // 제목과 작성본 저장 및 트랜잭션 커밋
+        invitationService.update(
+                userId,
+                invitationId,
+                requestDto
+        );
+
+        InvitationUpdateResponseDto responseDto = invitationService.getUpdateResult(
                 userId,
                 invitationId
         );

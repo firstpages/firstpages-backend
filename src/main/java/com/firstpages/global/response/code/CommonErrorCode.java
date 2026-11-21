@@ -73,6 +73,13 @@ public enum CommonErrorCode implements ErrorResponseCode {
             HttpStatus.INTERNAL_SERVER_ERROR,
             "INTERNAL_SERVER_ERROR",
             "서버 내부 오류가 발생했습니다."
+    ),
+
+    // 다른 요청의 수정으로 인한 버전 충돌
+    VERSION_CONFLICT(
+            HttpStatus.CONFLICT,
+            "VERSION_CONFLICT",
+            "다른 요청에서 데이터가 수정되었습니다. 새로고침 후 다시 시도해 주세요."
     );
 
     private final HttpStatus httpStatus;

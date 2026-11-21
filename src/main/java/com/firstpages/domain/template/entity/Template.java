@@ -9,6 +9,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import tools.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -59,6 +60,11 @@ public class Template {
     @Column(name = "default_font_key", length = 64, nullable = false)
     private String defaultFontKey;
 
+    // 템플릿 미리보기에 사용하는 예시 청첩장 JSON 데이터
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "preview_body", columnDefinition = "json")
+    private JsonNode previewBody;
+
     // 선택 가능 여부
     @Column(name = "is_selectable", nullable = false)
     private boolean selectable = true;
@@ -83,6 +89,7 @@ public class Template {
             List<String> tags,
             String coverUrl,
             String defaultFontKey,
+            JsonNode previewBody,
             boolean selectable
     ) {
         this.code = code;
@@ -93,6 +100,7 @@ public class Template {
         this.tags = List.copyOf(tags);
         this.coverUrl = coverUrl;
         this.defaultFontKey = defaultFontKey;
+        this.previewBody = previewBody.deepCopy();
         this.selectable = selectable;
     }
 
@@ -106,6 +114,7 @@ public class Template {
             List<String> tags,
             String coverUrl,
             String defaultFontKey,
+            JsonNode previewBody,
             boolean selectable
     ) {
         return new Template(
@@ -117,6 +126,7 @@ public class Template {
                 tags,
                 coverUrl,
                 defaultFontKey,
+                previewBody,
                 selectable
         );
     }

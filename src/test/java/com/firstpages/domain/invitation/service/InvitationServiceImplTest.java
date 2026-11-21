@@ -93,6 +93,7 @@ class InvitationServiceImplTest {
                 List.of("심플"),
                 "https://images.example.com/templates/paper-cover.jpg",
                 "gowun-batang",
+                JsonNodeFactory.instance.objectNode(),
                 true
         );
         ReflectionTestUtils.setField(template, "id", TEMPLATE_ID);

@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.SQLIntegrityConstraintViolationException;
@@ -81,6 +82,7 @@ class InvitationDocumentRepositoryTest {
                         List.of("미니멀", "사진 중심"),
                         "/images/template-samples/camera-moment.png",
                         "gowun-batang",
+                        JsonNodeFactory.instance.objectNode(),
                         true
                 )
         );

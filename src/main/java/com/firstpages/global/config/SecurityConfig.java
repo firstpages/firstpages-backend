@@ -106,6 +106,13 @@ public class SecurityConfig {
                                 "/api/csrf"
                         )
                         .permitAll()
+                        // 템플릿 목록과 미리보기 상세 조회는 비로그인 접근 허용
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/templates",
+                                "/api/templates/{templateId}"
+                        )
+                        .permitAll()
                         // Refresh Token을 이용한 인증 관련 API
                         .requestMatchers(
                                 HttpMethod.POST,
@@ -173,6 +180,4 @@ public class SecurityConfig {
 
         return source;
     }
-
-
 }

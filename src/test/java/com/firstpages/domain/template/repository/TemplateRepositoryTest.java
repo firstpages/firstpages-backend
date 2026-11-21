@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +25,57 @@ class TemplateRepositoryTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    // 미리보기 JSON의 중첩 구조와 값이 DB 저장 후에도 유지되는지 검증
+    @Test
+    @DisplayName("미리보기 JSON을 저장하고 조회하면 원래 구조와 값이 유지된다")
+    void saveAndReadPreviewBody() {
+        // given
+        ObjectNode previewBody = JsonNodeFactory.instance.objectNode();
+        previewBody.put("font", "lee-seoyun");
+
+        previewBody.putObject("basic")
+                .put("groomName", "박서준")
+                .put("brideName", "김다은")
+                .put("weddingDate", "2027-05-22")
+                .put("weddingTime", "12:30:00");
+
+        previewBody.putObject("greeting")
+                .put("enabled", true)
+                .put("title", "저희 결혼합니다")
+                .put("body", "소중한 날에 함께해 주세요.\n감사합니다.");
+
+        ObjectNode gallery = previewBody.putObject("gallery");
+        gallery.put("enabled", false);
+        gallery.putArray("photos");
+
+        previewBody.putNull("coverPhoto");
+
+        Template template = Template.create(
+                uniqueCode(),
+                "하트 노트",
+                "종이 위에 붙인 작은 사랑",
+                "하트 장식이 있는 청첩장입니다.",
+                "handwriting",
+                List.of("손글씨", "로맨틱"),
+                "/images/template-samples/color-transparent-v1/standing-embrace.png",
+                "lee-seoyun",
+                previewBody,
+                true
+        );
+
+        Long templateId = templateRepository.save(template).getId();
+
+        flushAndClear();
+
+        // when
+        Template found = templateRepository.findById(templateId)
+                .orElseThrow();
+
+        // then
+        assertThat(found.getPreviewBody()).isNotNull();
+        assertThat(found.getPreviewBody()).isEqualTo(previewBody);
+    }
 
     // 템플릿 저장 시 기본키가 자동 생성되는지 검증
     @Test
@@ -154,6 +207,7 @@ class TemplateRepositoryTest {
                 List.of("미니멀", "사진 중심"),
                 "/images/template-samples/camera-moment.png",
                 "gowun-batang",
+                JsonNodeFactory.instance.objectNode(),
                 selectable
         );
     }

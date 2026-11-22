@@ -8,6 +8,7 @@ import com.firstpages.domain.invitation.entity.Invitation;
 import com.firstpages.domain.invitation.entity.InvitationDocument;
 import com.firstpages.domain.invitation.entity.InvitationDocumentKind;
 import com.firstpages.domain.invitation.exception.InvitationErrorCode;
+import com.firstpages.domain.invitation.mapper.InvitationPublicBodyMapper;
 import com.firstpages.domain.invitation.repository.InvitationDocumentRepository;
 import com.firstpages.domain.invitation.repository.InvitationRepository;
 import com.firstpages.domain.template.entity.Template;
@@ -20,8 +21,8 @@ import com.firstpages.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,6 +48,9 @@ public class InvitationServiceImpl implements InvitationService {
 
     // 초기 청첩장 작성본 JSON 생성 컴포넌트
     private final InvitationDraftBodyFactory draftBodyFactory;
+
+    // 저장된 공개본을 하객용 JSON으로 변환
+    private final InvitationPublicBodyMapper publicBodyMapper;
 
     // 선택 가능한 템플릿으로 청첩장을 생성하고 초기 작성본을 함께 저장
     @Transactional
@@ -259,5 +263,28 @@ public class InvitationServiceImpl implements InvitationService {
                 ));
 
         return InvitationPublishResponseDto.from(invitation);
+    }
+
+    // 공개 상태인 청첩장의 공개본을 조회해 하객용 응답으로 변환
+    @Override
+    public PublicInvitationResponseDto getPublicInvitation(
+            String publicId
+    ) {
+        // 청첩장의 공개본
+        InvitationDocument published = invitationDocumentRepository.findPublishedByPublicId(publicId)
+                .orElseThrow(() -> new BusinessException(
+                        InvitationErrorCode.INVITATION_NOT_FOUND
+                ));
+
+        // 사진 URL 조회 기능을 연결하기 전에는 본문만 가공
+        JsonNode publicBody = publicBodyMapper.toPublicBody(
+                published.getBody(),
+                storageKey -> Optional.empty()
+        );
+
+        return PublicInvitationResponseDto.of(
+                published,
+                publicBody
+        );
     }
 }

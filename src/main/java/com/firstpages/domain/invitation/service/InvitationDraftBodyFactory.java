@@ -1,103 +1,74 @@
 package com.firstpages.domain.invitation.service;
 
-
 import com.firstpages.domain.template.entity.Template;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-// 청첩장 초기 작성본 JSON 생성 컴포넌트
+// 새 청첩장의 초기 작성본 JSON을 생성
 @Component
 public class InvitationDraftBodyFactory {
 
-    // 초기 JSON 생성에 사용하는 Jackson 2 매퍼
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    // 선택한 템플릿을 기준으로 초기 작성본 생성
+    // 템플릿의 기본 글꼴과 빈 입력값으로 작성본을 구성
     public JsonNode create(Template template) {
-        ObjectNode body = objectMapper.createObjectNode();
-
-        // 템플릿 기본 글꼴 설정
+        ObjectNode body = JsonNodeFactory.instance.objectNode();
         body.put("font", template.getDefaultFontKey());
 
-        // 신랑·신부 및 예식 정보
-        ObjectNode basic = body.putObject("basic");
-        basic.put("groomName", "");
-        basic.put("brideName", "");
-        basic.putNull("weddingDate");
-        basic.putNull("weddingTime");
+        // 작성 전에는 이름을 비우고 예식 날짜와 시간을 미정으로 둠
+        body.putObject("basic")
+                .put("groomName", "")
+                .put("brideName", "")
+                .putNull("weddingDate")
+                .putNull("weddingTime");
 
-        // 예식장 정보
-        ObjectNode venue = body.putObject("venue");
-        venue.put("name", "");
-        venue.put("hall", "");
-        venue.put("address", "");
-        venue.putNull("lat");
-        venue.putNull("lng");
+        // 지도 위치를 확인하기 전에는 좌표를 미정으로 둠
+        body.putObject("venue")
+                .put("name", "")
+                .put("hall", "")
+                .put("address", "")
+                .putNull("lat")
+                .putNull("lng");
 
-        // 대표 사진
+        // 사진과 목록은 처음에 비어 있는 상태로 생성
         body.putNull("coverPhoto");
+        body.putObject("gallery")
+                .putArray("photos");
+        body.putObject("parents")
+                .putArray("items");
+        body.putObject("contacts")
+                .putArray("items");
+        body.putObject("accounts")
+                .putArray("items");
+        body.putObject("notices")
+                .putArray("items");
+        body.putObject("interview")
+                .putArray("items");
 
-        // 인사말
-        ObjectNode greeting = body.putObject("greeting");
-        greeting.put("enabled", false);
-        greeting.put("title", "");
-        greeting.put("body", "");
+        // 인사말과 교통 안내는 입력값의 유무로 표시 여부를 판단
+        body.putObject("greeting")
+                .put("title", "")
+                .put("body", "");
 
-        // 갤러리
-        ObjectNode gallery = body.putObject("gallery");
-        gallery.put("enabled", false);
-        gallery.putArray("photos");
+        body.putObject("transport")
+                .put("transit", "")
+                .put("parking", "")
+                .put("shuttle", "");
 
-        // 혼주 정보
-        ObjectNode parents = body.putObject("parents");
-        parents.put("enabled", false);
-        parents.putArray("items");
+        // RSVP와 방명록은 기본적으로 비활성화
+        body.putObject("rsvp")
+                .put("enabled", false)
+                .put("title", "")
+                .put("description", "");
 
-        // 연락처
-        ObjectNode contacts = body.putObject("contacts");
-        contacts.put("enabled", false);
-        contacts.putArray("items");
+        body.putObject("guestbook")
+                .put("enabled", false)
+                .putNull("photo");
 
-        // 계좌 정보
-        ObjectNode accounts = body.putObject("accounts");
-        accounts.put("enabled", false);
-        accounts.putArray("items");
-
-        // 교통 안내
-        ObjectNode transport = body.putObject("transport");
-        transport.put("enabled", false);
-        transport.put("transit", "");
-        transport.put("parking", "");
-        transport.put("shuttle", "");
-
-        // 안내 사항
-        ObjectNode notices = body.putObject("notices");
-        notices.put("enabled", false);
-        notices.putArray("items");
-
-        // 신랑·신부 인터뷰
-        ObjectNode interview = body.putObject("interview");
-        interview.put("enabled", false);
-        interview.put("title", "");
-        interview.putArray("items");
-
-        // 참석 여부
-        ObjectNode rsvp = body.putObject("rsvp");
-        rsvp.put("enabled", false);
-        rsvp.put("title", "");
-        rsvp.put("description", "");
-
-        // 방명록
-        ObjectNode guestbook = body.putObject("guestbook");
-        guestbook.put("enabled", false);
-        guestbook.putNull("photo");
-
-        // 공유 정보
-        ObjectNode share = body.putObject("share");
-        share.put("title", "");
-        share.put("description", "");
+        // 공유 문구가 비어 있으면 기본 문구를 사용
+        body.putObject("share")
+                .put("title", "")
+                .put("description", "");
 
         return body;
     }

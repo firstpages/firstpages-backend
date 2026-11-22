@@ -106,11 +106,12 @@ public class SecurityConfig {
                                 "/api/csrf"
                         )
                         .permitAll()
-                        // 템플릿 목록과 미리보기 상세 조회는 비로그인 접근 허용
+                        // 템플릿 조회와 하객용 청첩장 조회를 로그인 없이 허용
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/templates",
-                                "/api/templates/{templateId}"
+                                "/api/templates/{templateId}",
+                                "/api/public/invitations/{publicId}"
                         )
                         .permitAll()
                         // Refresh Token을 이용한 인증 관련 API

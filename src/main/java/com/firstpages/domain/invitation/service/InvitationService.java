@@ -52,4 +52,9 @@ public interface InvitationService {
             Long userId,
             Long invitationId
     );
+
+    // 공유 식별자로 하객용 공개 청첩장을 조회
+    PublicInvitationResponseDto getPublicInvitation(
+            String publicId
+    );
 }

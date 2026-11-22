@@ -51,4 +51,18 @@ public interface InvitationDocumentRepository extends JpaRepository<InvitationDo
             @Param("invitationId") Long invitationId,
             @Param("ownerId") Long ownerId
     );
+
+    // 공유 식별자로 공개 상태인 청첩장의 공개본과 템플릿을 조회
+    @Query("""
+            select document
+            from InvitationDocument document
+            join fetch document.invitation invitation
+            join fetch document.template
+            where invitation.publicId = :publicId
+              and invitation.status = com.firstpages.domain.invitation.entity.InvitationStatus.PUBLISHED
+              and document.kind = com.firstpages.domain.invitation.entity.InvitationDocumentKind.PUBLISHED
+            """)
+    Optional<InvitationDocument> findPublishedByPublicId(
+            @Param("publicId") String publicId
+    );
 }

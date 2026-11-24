@@ -39,7 +39,7 @@ public class InvitationListResponseDto {
 
     // 목록 화면의 대표 사진 응답 DTO
     @Getter
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class CoverPhotoResponseDto {
         // 대표 사진 접근 URL
@@ -76,18 +76,27 @@ public class InvitationListResponseDto {
                             ? focalXNode.intValue() : null
                     )
                     .focalY(focalYNode.isIntegralNumber() && focalYNode.canConvertToInt()
-                            ? focalYNode.intValue() : null)
+                            ? focalYNode.intValue() : null
+                    )
                     .zoom(zoomNode.isNumber()
-                            ? zoomNode.doubleValue()
-                            : null
+                            ? zoomNode.doubleValue() : null
                     )
                     .build();
         }
     }
 
-    // 청첩장 작성본과 추출한 표시 정보를 목록 응답으로 변환
-    public static InvitationListResponseDto from(
-            InvitationDocument document
+    // 작성본의 기존 대표 사진 정보로 목록 응답을 생성
+    public static InvitationListResponseDto from(InvitationDocument document) {
+        return of(
+                document,
+                document.getBody().path("coverPhoto")
+        );
+    }
+
+    // 작성본과 표시 URL이 추가된 대표 사진으로 목록 응답을 생성
+    public static InvitationListResponseDto of(
+            InvitationDocument document,
+            JsonNode coverPhoto
     ) {
 
         Invitation invitation = document.getInvitation();
@@ -98,13 +107,10 @@ public class InvitationListResponseDto {
                 .managementTitle(invitation.getManagementTitle())
                 .templateName(document.getTemplate().getName())
                 .status(invitation.getStatus())
-                .weddingDate(readWeddingDate(body
-                        .path("basic")
-                        .path("weddingDate")
+                .weddingDate(readWeddingDate(
+                        body.path("basic").path("weddingDate")
                 ))
-                .coverPhoto(CoverPhotoResponseDto.from(
-                        body.path("coverPhoto")
-                ))
+                .coverPhoto(CoverPhotoResponseDto.from(coverPhoto))
                 .build();
     }
 
@@ -120,6 +126,4 @@ public class InvitationListResponseDto {
             return null;
         }
     }
-
-
 }

@@ -10,11 +10,16 @@ import com.firstpages.global.response.ResponseFactory;
 import com.firstpages.global.response.code.CommonSuccessCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 // 청첩장 생성 및 조회 API의 HTTP 요청과 응답을 처리
 @RestController
@@ -92,6 +97,43 @@ public class InvitationController {
                 responseDto
         );
     }
+
+    // 작성본과 첨부 사진을 함께 저장하고 현재 버전을 반환
+    @PutMapping(
+            path = "/{invitationId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<InvitationUpdateResponseDto>> updateWithPhotos(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long invitationId,
+            @Valid @RequestPart("request") InvitationUpdateRequestDto requestDto,
+            @RequestParam MultiValueMap<String, MultipartFile> parts
+    ) {
+        // DTO로 읽은 JSON 파트를 사진 파일 목록에서 제외
+        Map<String, List<MultipartFile>> photoParts = new HashMap<>(parts);
+
+        photoParts.remove("request");
+
+        // 작성본과 첨부 사진을 같은 저장 작업으로 전달
+        invitationService.update(
+                userId,
+                invitationId,
+                requestDto,
+                photoParts
+        );
+
+        // 커밋 이후 최신 저장 결과를 조회
+        InvitationUpdateResponseDto responseDto = invitationService.getUpdateResult(
+                userId,
+                invitationId
+        );
+
+        return ResponseFactory.success(
+                CommonSuccessCode.OK,
+                responseDto
+        );
+    }
+
 
     // 청첩장 공개 요청을 처리하고 현재 공개 결과를 반환
     @PostMapping("/{invitationId}/publish")

@@ -82,3 +82,7 @@ app:
     failure-redirect-uri: ${OAUTH2_FAILURE_REDIRECT_URI:http://localhost:5173/login}
     # 운영 환경에서는 HTTPS를 사용하고 AUTH_COOKIE_SECURE=true로 설정
     cookie-secure: ${AUTH_COOKIE_SECURE:false}
+
+  invitation-photos:
+    # 하객용 청첩장 사진을 제공하는 CloudFront 배포 주소
+    cloudfront-base-url: ${INVITATION_PHOTOS_CLOUDFRONT_BASE_URL}

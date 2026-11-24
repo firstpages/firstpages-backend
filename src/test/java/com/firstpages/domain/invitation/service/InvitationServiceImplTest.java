@@ -9,6 +9,7 @@ import com.firstpages.domain.invitation.entity.InvitationDocument;
 import com.firstpages.domain.invitation.entity.InvitationDocumentKind;
 import com.firstpages.domain.invitation.entity.InvitationStatus;
 import com.firstpages.domain.invitation.exception.InvitationErrorCode;
+import com.firstpages.domain.invitation.mapper.InvitationOwnerPhotoMapper;
 import com.firstpages.domain.invitation.repository.InvitationDocumentRepository;
 import com.firstpages.domain.invitation.repository.InvitationRepository;
 import com.firstpages.domain.template.entity.Template;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -65,6 +67,12 @@ class InvitationServiceImplTest {
 
     @Mock
     private InvitationDraftBodyFactory draftFactory;
+
+    // 실제 매퍼를 사용하고 사진 URL 발급은 테스트용 함수로 대체합니다.
+    @Spy
+    private InvitationOwnerPhotoMapper ownerPhotoMapper = new InvitationOwnerPhotoMapper(
+            storageKey -> "https://images.example.com/" + storageKey
+    );
 
     @InjectMocks
     private InvitationServiceImpl invitationService;
@@ -421,7 +429,6 @@ class InvitationServiceImplTest {
 
         editedBody.putObject("coverPhoto")
                 .put("storageKey", "invitations/301/cover.jpg")
-                .put("url", "https://images.example.com/cover.jpg")
                 .put("focalX", 50)
                 .put("focalY", 40)
                 .put("zoom", 1.2);
@@ -463,7 +470,7 @@ class InvitationServiceImplTest {
 
         assertAll(
                 () -> assertEquals(
-                        "https://images.example.com/cover.jpg",
+                        "https://images.example.com/invitations/301/cover.jpg",
                         item.getCoverPhoto().getUrl()
                 ),
                 () -> assertEquals(

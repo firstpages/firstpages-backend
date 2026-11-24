@@ -4,8 +4,10 @@ import com.firstpages.domain.invitation.dto.request.InvitationCreateRequestDto;
 import com.firstpages.domain.invitation.dto.request.InvitationPublishRequestDto;
 import com.firstpages.domain.invitation.dto.request.InvitationUpdateRequestDto;
 import com.firstpages.domain.invitation.dto.response.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 // 청첩장 비즈니스 로직 인터페이스
 public interface InvitationService {
@@ -32,6 +34,14 @@ public interface InvitationService {
             Long userId,
             Long invitationId,
             InvitationUpdateRequestDto requestDto
+    );
+
+    // 로그인 사용자가 관리용 제목과 작성본을 첨부 사진과 함께 저장
+    void update(
+            Long userId,
+            Long invitationId,
+            InvitationUpdateRequestDto requestDto,
+            Map<String, List<MultipartFile>> photoParts
     );
 
     // 소유한 청첩장의 ID와 현재 버전 조회

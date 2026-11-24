@@ -14,6 +14,7 @@ spring:
     properties:
       hibernate:
         default_batch_fetch_size: 100
+        format_sql: true
 
         type:
           json_format_mapper: org.hibernate.type.format.jackson.Jackson3JsonFormatMapper
@@ -21,8 +22,18 @@ spring:
   flyway:
     enabled: false
 
+  servlet:
+    multipart:
+      max-file-size: 5MB # 대표 사진 한 장의 업로드 한도
+      max-request-size: 6MB # 멀티파트 헤더를 포함한 전체 요청 한도
+
 logging:
   level:
     root: INFO
     org.springframework: WARN
     org.hibernate: WARN
+
+app:
+  invitation-photos:
+    region: ${INVITATION_PHOTOS_REGION}
+    bucket: ${INVITATION_PHOTOS_BUCKET}

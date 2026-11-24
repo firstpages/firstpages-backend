@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 
 // 청첩장 상세 조회 응답 DTO
 @Getter
-@Builder(access =  AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PRIVATE)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class InvitationDetailResponseDto {
 
@@ -52,9 +52,18 @@ public class InvitationDetailResponseDto {
     // 청첩장 작성본 JSON 데이터
     private final JsonNode body;
 
+    // 작성본의 기존 본문으로 상세 응답을 생성
+    public static InvitationDetailResponseDto from(InvitationDocument document) {
+        return of(
+                document,
+                document.getBody()
+        );
+    }
+
     // 청첩장 및 작성본 데이터를 조합해 상세 응답 DTO 생성
-    public static InvitationDetailResponseDto from(
-            InvitationDocument document
+    public static InvitationDetailResponseDto of(
+            InvitationDocument document,
+            JsonNode body
     ) {
         Invitation invitation = document.getInvitation();
         Template template = document.getTemplate();
@@ -70,7 +79,7 @@ public class InvitationDetailResponseDto {
                 .version(invitation.getVersion())
                 .createdAt(invitation.getCreatedAt())
                 .updatedAt(invitation.getUpdatedAt())
-                .body(document.getBody())
+                .body(body)
                 .build();
     }
 }

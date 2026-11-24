@@ -44,6 +44,27 @@ public enum InvitationErrorCode implements ErrorResponseCode {
             HttpStatus.BAD_REQUEST,
             "INVITATION_INVALID_BODY",
             "청첩장 작성본 형식이 올바르지 않습니다."
+    ),
+
+    // 파일이 비어 있거나 지원하는 이미지 형식과 크기 조건을 만족하지 않을 때 사용한다.
+    INVITATION_INVALID_COVER_PHOTO(
+            HttpStatus.BAD_REQUEST,
+            "INVITATION_INVALID_COVER_PHOTO",
+            "대표 사진은 2,400만 픽셀 이하의 JPEG 또는 PNG여야 합니다."
+    ),
+
+    // 대표 사진의 파일 크기가 업로드 한도를 초과했을 때 사용한다.
+    INVITATION_PHOTO_TOO_LARGE(
+            HttpStatus.CONTENT_TOO_LARGE,
+            "INVITATION_PHOTO_TOO_LARGE",
+            "대표 사진은 5MB 이하여야 합니다."
+    ),
+
+    // S3에 대표 사진을 저장하지 못했을 때 사용한다.
+    INVITATION_PHOTO_STORAGE_UNAVAILABLE(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "INVITATION_PHOTO_STORAGE_UNAVAILABLE",
+            "대표 사진을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요."
     );
 
     // HTTP 응답 상태

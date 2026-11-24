@@ -369,4 +369,29 @@ public class InvitationServiceImpl implements InvitationService {
                 publicBody
         );
     }
+
+    // 공개 처리와 같은 청첩장 행을 잠그고 공개본 삭제와 상태 전환을 함께 처리
+    @Transactional
+    @Override
+    public void unpublish(
+            Long userId,
+            Long invitationId
+    ) {
+        // 비관적 락으로 해당 청첩장 잠금
+        Invitation invitation = invitationRepository.findByOwnerIdAndIdForUpdate(
+                userId,
+                invitationId
+        ).orElseThrow(() -> new BusinessException(
+                InvitationErrorCode.INVITATION_NOT_FOUND
+        ));
+
+        // 공개본이 존재할 때만 삭제해 반복 요청도 성공
+        invitationDocumentRepository.findByInvitationIdAndKind(
+                invitationId,
+                InvitationDocumentKind.PUBLISHED
+        ).ifPresent(invitationDocumentRepository::delete);
+
+        // 청첩장 상태 전환
+        invitation.unpublish();
+    }
 }

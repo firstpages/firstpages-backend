@@ -96,4 +96,12 @@ public class Invitation {
         this.status = InvitationStatus.PUBLISHED;
         this.publishedAt = LocalDateTime.now();
     }
+
+    // 공개된 청첩장을 작성 중 상태로 전환
+    public void unpublish() {
+        if (this.status == InvitationStatus.PUBLISHED) {
+            this.status = InvitationStatus.DRAFT;
+        }
+    }
+
 }

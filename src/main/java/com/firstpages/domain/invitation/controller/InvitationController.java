@@ -161,4 +161,22 @@ public class InvitationController {
                 responseDto
         );
     }
+
+    // 소유한 청첩장의 공개본을 삭제하고 청첩장을 작성 중 상태로 전환
+    @DeleteMapping("/{invitationId}/publication")
+    public ResponseEntity<ApiResponse<Void>> unpublish(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long invitationId
+    ) {
+
+        invitationService.unpublish(
+                userId,
+                invitationId
+        );
+
+        return ResponseFactory.success(
+                CommonSuccessCode.OK,
+                null
+        );
+    }
 }

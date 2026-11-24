@@ -67,4 +67,10 @@ public interface InvitationService {
     PublicInvitationResponseDto getPublicInvitation(
             String publicId
     );
+
+    // 소유한 청첩장의 공개본을 삭제하고 공개를 해제(비공개)
+    void unpublish(
+            Long userId,
+            Long invitationId
+    );
 }

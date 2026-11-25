@@ -22,6 +22,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,6 +53,9 @@ class InvitationUpdateServiceTest {
     @Mock
     private InvitationDraftBodyFactory draftBodyFactory;
 
+    @Mock
+    private InvitationPhotoService invitationPhotoService;
+
     @InjectMocks
     private InvitationServiceImpl invitationService;
 
@@ -81,6 +85,11 @@ class InvitationUpdateServiceTest {
                 INVITATION_ID,
                 InvitationDocumentKind.DRAFT
         )).thenReturn(Optional.of(document));
+
+        ObjectNode previousBody = createBody();
+        when(document.getBody()).thenReturn(previousBody);
+        when(invitationPhotoService.resolvePhotos(INVITATION_ID, previousBody, body, Map.of()))
+                .thenReturn(body);
 
         // when
         invitationService.update(USER_ID, INVITATION_ID, requestDto);

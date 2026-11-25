@@ -11,8 +11,6 @@ public interface InvitationPhotoStorage {
     );
 
     // 실패한 저장 요청에서 생성한 사진 객체를 삭제
-    void delete(
-            String storageKey
-    );
+    void delete(String storageKey);
 
 }

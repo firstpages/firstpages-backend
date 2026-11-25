@@ -73,4 +73,10 @@ public interface InvitationService {
             Long userId,
             Long invitationId
     );
+
+    // 소유한 청첩장과 작성본 및 공개본을 모두 삭제
+    void delete(
+            Long userId,
+            Long invitationId
+    );
 }

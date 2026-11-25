@@ -179,4 +179,21 @@ public class InvitationController {
                 null
         );
     }
+
+    // 소유한 청첩장 삭제 요청을 처리(청첩장 + 작성본 + 공개본 + S3 업로드 이미지)
+    @DeleteMapping("/{invitationId}")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long invitationId
+    ) {
+        invitationService.delete(
+                userId,
+                invitationId
+        );
+
+        return ResponseFactory.success(
+                CommonSuccessCode.OK,
+                null
+        );
+    }
 }

@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.BeanUtils;
 import org.springframework.test.util.ReflectionTestUtils;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -60,6 +61,8 @@ class InvitationUnpublishServiceTest {
                 INVITATION_ID,
                 InvitationDocumentKind.PUBLISHED
         )).thenReturn(Optional.of(publishedDocument));
+
+        when(publishedDocument.getBody()).thenReturn(JsonNodeFactory.instance.objectNode());
 
         invitationService.unpublish(OWNER_ID, INVITATION_ID);
 

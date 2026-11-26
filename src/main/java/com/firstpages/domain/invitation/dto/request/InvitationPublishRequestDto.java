@@ -6,7 +6,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 저장된 청첩장 작성본의 공개 요청
+// 저장된 청첩장 작성본의 공개 요청 DTO
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class InvitationPublishRequestDto {

@@ -53,13 +53,24 @@ public interface InvitationRepository extends JpaRepository<Invitation, Long> {
     // 소유한 청첩장을 비관적 락을 걸고 조회
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        select invitation
-        from Invitation invitation
-        where invitation.owner.id = :ownerId
-          and invitation.id = :invitationId
-        """)
+            select invitation
+            from Invitation invitation
+            where invitation.owner.id = :ownerId
+              and invitation.id = :invitationId
+            """)
     Optional<Invitation> findByOwnerIdAndIdForUpdate(
             @Param("ownerId") Long ownerId,
             @Param("invitationId") Long invitationId
+    );
+
+    // 공유 식별자로 청첩장을 조회하고 행을 잠그기
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select invitation
+            from Invitation invitation
+            where invitation.publicId = :publicId
+            """)
+    Optional<Invitation> findByPublicIdForUpdate(
+            @Param("publicId") String publicId
     );
 }

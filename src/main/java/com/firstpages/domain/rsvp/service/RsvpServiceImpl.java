@@ -8,6 +8,7 @@ import com.firstpages.domain.invitation.exception.InvitationErrorCode;
 import com.firstpages.domain.invitation.repository.InvitationDocumentRepository;
 import com.firstpages.domain.invitation.repository.InvitationRepository;
 import com.firstpages.domain.rsvp.dto.request.RsvpCreateRequestDto;
+import com.firstpages.domain.rsvp.dto.request.RsvpUpdateRequestDto;
 import com.firstpages.domain.rsvp.dto.response.RsvpItemResponseDto;
 import com.firstpages.domain.rsvp.dto.response.RsvpListResponseDto;
 import com.firstpages.domain.rsvp.entity.Rsvp;
@@ -133,38 +134,6 @@ public class RsvpServiceImpl implements RsvpService {
         rsvpRepository.save(rsvp);
     }
 
-    // 참석 여부에 따라 동반 인원과 식사 인원이 허용 범위에 있는지 확인
-    private void validateCounts(
-            Integer companionCount,
-            Integer mealCount,
-            boolean attending
-    ) {
-        // 참석이면 동반 인원과 식사 인원을 모두 입력
-        if (attending) {
-            if (companionCount == null || mealCount == null
-                    || companionCount < 0 || mealCount < 0
-            ) {
-                throw new BusinessException(RsvpErrorCode.RSVP_INVALID_COUNTS);
-            }
-
-            // 식사 인원은 본인을 포함한 전체 참석 인원을 넘을 수 없음
-            long totalGuests = 1L + companionCount;
-
-            // 식사 인원이 전체 참석 인원을 초과할 경우
-            if (totalGuests < mealCount) {
-                throw new BusinessException(RsvpErrorCode.RSVP_INVALID_COUNTS);
-            }
-
-            return;
-        }
-
-        // 불참이면 두 인원은 각각 생략하거나 0으로 입력할 수 있음
-        if ((companionCount != null && companionCount != 0)
-                || (mealCount != null && mealCount != 0)) {
-            throw new BusinessException(RsvpErrorCode.RSVP_INVALID_COUNTS);
-        }
-    }
-
     // 소유권을 확인하고 참석 응답 페이지와 전체 인원 집계를 반환
     @Override
     public RsvpListResponseDto getRsvps(
@@ -220,5 +189,138 @@ public class RsvpServiceImpl implements RsvpService {
                 pageResponse,
                 summary
         );
+    }
+
+    // 소유권과 수정 내용을 검증한 뒤 변경된 RSVP 응답을 반환
+    @Transactional
+    @Override
+    public RsvpItemResponseDto update(
+            Long userId,
+            Long invitationId,
+            Long rsvpId,
+            RsvpUpdateRequestDto requestDto
+    ) {
+        // 소유권을 확인하고 같은 청첩장의 하객 제출과 편집 순서를 보장
+        invitationRepository
+                .findByOwnerIdAndIdForUpdate(userId, invitationId)
+                .orElseThrow(() -> new BusinessException(
+                        InvitationErrorCode.INVITATION_NOT_FOUND
+                ));
+
+        // 요청한 청첩장에 속한 응답을 조회하고 편집할 행을 잠그기
+        Rsvp rsvp = rsvpRepository
+                .findByInvitationIdAndRsvpIdForUpdate(invitationId, rsvpId)
+                .orElseThrow(() -> new BusinessException(
+                        RsvpErrorCode.RSVP_NOT_FOUND
+                ));
+
+        // 하객 이름
+        String guestName = requestDto.getGuestName().strip();
+
+        // 하객 구분
+        RsvpGuestSide guestSide = requestDto.getGuestSide();
+
+        // 참석 여부
+        boolean attending = requestDto.getAttending();
+
+        // 동반 인원
+        int companionCount = requestDto.getCompanionCount();
+
+        // 식사 인원
+        int mealCount = requestDto.getMealCount();
+
+        // 참석 여부에 따라 허용되는 동반 인원과 식사 인원의 조합을 검증
+        validateCounts(
+                companionCount,
+                mealCount,
+                attending
+        );
+
+        // 현재 응답을 제외하고 수정할 이름, 하객 측, 기존 전화번호 뒷 네 자리로 중복을 확인
+        boolean alreadySubmitted = rsvpRepository.existsByInvitationIdAndGuestNameAndGuestSideAndPhoneLastFourAndIdNot(
+                invitationId,
+                guestName,
+                guestSide,
+                rsvp.getPhoneLastFour(),
+                rsvpId
+        );
+
+        // 다른 응답과 중복되면 편집을 거절
+        if (alreadySubmitted) {
+            throw new BusinessException(RsvpErrorCode.RSVP_ALREADY_SUBMITTED);
+        }
+
+        rsvp.update(
+                guestName,
+                guestSide,
+                attending,
+                companionCount,
+                mealCount
+        );
+
+        // 편집 결과를 목록 항목과 같은 형식으로 반환
+        return RsvpItemResponseDto.from(rsvp);
+    }
+
+    // 소유권을 확인한 뒤 요청한 청첩장의 참석 응답 한 건을 삭제
+    @Transactional
+    @Override
+    public void delete(
+            Long userId,
+            Long invitationId,
+            Long rsvpId
+    ) {
+
+        // 요청자가 청첩장을 소유하는지 확인
+        if (!invitationRepository.existsByIdAndOwnerId(
+                invitationId,
+                userId
+        )) {
+            throw new BusinessException(InvitationErrorCode.INVITATION_NOT_FOUND);
+        }
+
+        // 두 식별자가 일치하는 응답의 삭제 건수를 확인
+        int deleted = rsvpRepository.deleteByInvitationIdAndRsvpId(
+                invitationId,
+                rsvpId
+        );
+
+        // 삭제할 rsvp가 없을 경우
+        if (deleted != 1) {
+            throw new BusinessException(RsvpErrorCode.RSVP_NOT_FOUND);
+        }
+    }
+
+
+    // 참석 여부에 따라 동반 인원과 식사 인원이 허용 범위에 있는지 확인
+    private void validateCounts(
+            Integer companionCount,
+            Integer mealCount,
+            boolean attending
+    ) {
+        // 참석이면 동반 인원과 식사 인원을 모두 입력
+        if (attending) {
+            if (companionCount == null || mealCount == null
+                    || companionCount < 0 || mealCount < 0
+            ) {
+                throw new BusinessException(RsvpErrorCode.RSVP_INVALID_COUNTS);
+            }
+
+            // 식사 인원은 본인을 포함한 전체 참석 인원을 넘을 수 없음
+            long totalGuests = 1L + companionCount;
+
+            // 식사 인원이 전체 참석 인원을 초과할 경우
+            if (totalGuests < mealCount) {
+                throw new BusinessException(RsvpErrorCode.RSVP_INVALID_COUNTS);
+            }
+
+            return;
+        }
+
+        // 불참이면 두 인원은 각각 생략하거나 0으로 입력할 수 있음
+        if ((companionCount != null && companionCount != 0)
+                || (mealCount != null && mealCount != 0)) {
+            throw new BusinessException(RsvpErrorCode.RSVP_INVALID_COUNTS);
+        }
     }
 }

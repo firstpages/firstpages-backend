@@ -16,6 +16,9 @@ spring:
         default_batch_fetch_size: 100
         format_sql: true
 
+        jdbc:
+          time_zone: UTC
+
         type:
           json_format_mapper: org.hibernate.type.format.jackson.Jackson3JsonFormatMapper
 

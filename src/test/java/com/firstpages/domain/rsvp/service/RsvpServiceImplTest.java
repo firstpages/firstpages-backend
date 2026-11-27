@@ -7,6 +7,7 @@ import com.firstpages.domain.invitation.exception.InvitationErrorCode;
 import com.firstpages.domain.invitation.repository.InvitationDocumentRepository;
 import com.firstpages.domain.invitation.repository.InvitationRepository;
 import com.firstpages.domain.rsvp.dto.request.RsvpCreateRequestDto;
+import com.firstpages.domain.rsvp.dto.request.RsvpUpdateRequestDto;
 import com.firstpages.domain.rsvp.entity.Rsvp;
 import com.firstpages.domain.rsvp.entity.RsvpGuestSide;
 import com.firstpages.domain.rsvp.exception.RsvpErrorCode;
@@ -202,6 +203,97 @@ class RsvpServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(InvitationErrorCode.INVITATION_NOT_FOUND));
         verifyNoInteractions(rsvpRepository);
+    }
+
+    // 편집 가능한 값을 갱신하고 기존 전화번호 뒷자리를 유지하는지 확인한다.
+    @Test
+    @DisplayName("소유자가 응답을 불참으로 수정하면 이름과 하객 측을 바꾸고 인원을 0으로 저장한다")
+    void updatesOwnedResponse() {
+        Rsvp rsvp = stubEditableResponse();
+
+        var result = rsvpService.update(7L, INVITATION_ID, 21L, updateRequest());
+
+        verify(rsvpRepository).existsByInvitationIdAndGuestNameAndGuestSideAndPhoneLastFourAndIdNot(
+                INVITATION_ID, "이하객", RsvpGuestSide.BRIDE, "0123", 21L
+        );
+        assertThat(result.getGuestName()).isEqualTo("이하객");
+        assertThat(result.getGuestSide()).isEqualTo(RsvpGuestSide.BRIDE);
+        assertThat(result.isAttending()).isFalse();
+        assertThat(result.getCompanionCount()).isZero();
+        assertThat(result.getMealCount()).isZero();
+        assertThat(rsvp.getPhoneLastFour()).isEqualTo("0123");
+    }
+
+    // 다른 응답과 중복되면 기존 엔티티에 변경을 적용하지 않는다.
+    @Test
+    @DisplayName("기존 전화번호 뒷자리와 수정할 이름 및 하객 측이 다른 응답과 일치하면 거절한다")
+    void rejectsDuplicateUpdate() {
+        Rsvp rsvp = stubEditableResponse();
+        when(rsvpRepository.existsByInvitationIdAndGuestNameAndGuestSideAndPhoneLastFourAndIdNot(
+                INVITATION_ID, "이하객", RsvpGuestSide.BRIDE, "0123", 21L
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> rsvpService.update(7L, INVITATION_ID, 21L, updateRequest()))
+                .isInstanceOfSatisfying(BusinessException.class, error ->
+                        assertThat(error.getErrorCode()).isEqualTo(RsvpErrorCode.RSVP_ALREADY_SUBMITTED));
+        assertThat(rsvp.getGuestName()).isEqualTo("김하객");
+        assertThat(rsvp.getGuestSide()).isEqualTo(RsvpGuestSide.GROOM);
+    }
+
+    // 소유권 확인에 실패하면 관리 변경 요청을 모두 차단한다.
+    @Test
+    @DisplayName("청첩장 소유자가 아니면 RSVP 수정과 삭제를 모두 거절한다")
+    void rejectsNonOwnerMutations() {
+        when(invitationRepository.findByOwnerIdAndIdForUpdate(8L, INVITATION_ID))
+                .thenReturn(Optional.empty());
+        when(invitationRepository.existsByIdAndOwnerId(INVITATION_ID, 8L)).thenReturn(false);
+
+        assertThatThrownBy(() -> rsvpService.update(8L, INVITATION_ID, 21L, updateRequest()))
+                .isInstanceOfSatisfying(BusinessException.class, error ->
+                        assertThat(error.getErrorCode()).isEqualTo(InvitationErrorCode.INVITATION_NOT_FOUND));
+        assertThatThrownBy(() -> rsvpService.delete(8L, INVITATION_ID, 21L))
+                .isInstanceOfSatisfying(BusinessException.class, error ->
+                        assertThat(error.getErrorCode()).isEqualTo(InvitationErrorCode.INVITATION_NOT_FOUND));
+
+        verifyNoInteractions(rsvpRepository);
+    }
+
+    // 해당 청첩장에 있는 응답만 삭제하고 삭제 건수에 따라 결과를 구분한다.
+    @Test
+    @DisplayName("소유자는 일치하는 RSVP를 삭제하고 없는 응답에는 RSVP_NOT_FOUND를 받는다")
+    void deletesOnlyMatchingResponse() {
+        when(invitationRepository.existsByIdAndOwnerId(INVITATION_ID, 7L)).thenReturn(true);
+        when(rsvpRepository.deleteByInvitationIdAndRsvpId(INVITATION_ID, 21L)).thenReturn(1);
+        when(rsvpRepository.deleteByInvitationIdAndRsvpId(INVITATION_ID, 22L)).thenReturn(0);
+
+        rsvpService.delete(7L, INVITATION_ID, 21L);
+
+        assertThatThrownBy(() -> rsvpService.delete(7L, INVITATION_ID, 22L))
+                .isInstanceOfSatisfying(BusinessException.class, error ->
+                        assertThat(error.getErrorCode()).isEqualTo(RsvpErrorCode.RSVP_NOT_FOUND));
+        verify(rsvpRepository).deleteByInvitationIdAndRsvpId(INVITATION_ID, 21L);
+    }
+
+    // 소유자가 관리할 기존 응답을 준비한다.
+    private Rsvp stubEditableResponse() {
+        Invitation invitation = Invitation.create(null, "테스트 청첩장", PUBLIC_ID);
+        Rsvp rsvp = Rsvp.create(invitation, "김하객", RsvpGuestSide.GROOM, "0123", true, 1, 1);
+        when(invitationRepository.findByOwnerIdAndIdForUpdate(7L, INVITATION_ID))
+                .thenReturn(Optional.of(invitation));
+        when(rsvpRepository.findByInvitationIdAndRsvpIdForUpdate(INVITATION_ID, 21L))
+                .thenReturn(Optional.of(rsvp));
+        return rsvp;
+    }
+
+    // 이름, 하객 측, 불참과 인원 정보를 담은 수정 요청을 만든다.
+    private RsvpUpdateRequestDto updateRequest() {
+        var request = BeanUtils.instantiateClass(RsvpUpdateRequestDto.class);
+        ReflectionTestUtils.setField(request, "guestName", " 이하객 ");
+        ReflectionTestUtils.setField(request, "guestSide", RsvpGuestSide.BRIDE);
+        ReflectionTestUtils.setField(request, "attending", false);
+        ReflectionTestUtils.setField(request, "companionCount", 0);
+        ReflectionTestUtils.setField(request, "mealCount", 0);
+        return request;
     }
 
     // 공개 상태와 공개본의 RSVP 활성화 값을 테스트에 맞게 설정한다.

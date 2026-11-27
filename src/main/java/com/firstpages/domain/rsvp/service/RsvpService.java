@@ -1,6 +1,8 @@
 package com.firstpages.domain.rsvp.service;
 
 import com.firstpages.domain.rsvp.dto.request.RsvpCreateRequestDto;
+import com.firstpages.domain.rsvp.dto.request.RsvpUpdateRequestDto;
+import com.firstpages.domain.rsvp.dto.response.RsvpItemResponseDto;
 import com.firstpages.domain.rsvp.dto.response.RsvpListResponseDto;
 
 // 하객의 참석 응답 제출 기능을 정의
@@ -18,5 +20,20 @@ public interface RsvpService {
             Long invitationId,
             int page,
             int size
+    );
+
+    // 소유자가 관리하는 청첩장의 RSVP 응답을 수정
+    RsvpItemResponseDto update(
+            Long userId,
+            Long invitationId,
+            Long rsvpId,
+            RsvpUpdateRequestDto requestDto
+    );
+
+    // 소유자가 관리하는 청첩장의 RSVP 응답 한 건을 삭제
+    void delete(
+            Long userId,
+            Long invitationId,
+            Long rsvpId
     );
 }

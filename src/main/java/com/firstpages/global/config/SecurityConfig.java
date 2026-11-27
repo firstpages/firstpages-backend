@@ -126,10 +126,11 @@ public class SecurityConfig {
                                 "/**"
                         )
                         .permitAll()
-                        // 하객이 로그인 없이 축하 메시지를 등록할 수 있도록 작성 경로를 허용
+                        // 하객이 로그인 없이 방명록과 참석 응답을 제출할 수 있도록 허용
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/public/invitations/{publicId}/guestbooks"
+                                "/api/public/invitations/{publicId}/guestbooks",
+                                "/api/public/invitations/{publicId}/rsvps"
                         )
                         .permitAll()
                         // 앞선 규칙과 일치하지 않은 나머지 요청

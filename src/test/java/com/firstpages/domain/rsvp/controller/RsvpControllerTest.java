@@ -2,10 +2,13 @@ package com.firstpages.domain.rsvp.controller;
 
 import com.firstpages.domain.rsvp.dto.response.RsvpItemResponseDto;
 import com.firstpages.domain.rsvp.dto.response.RsvpListResponseDto;
+import com.firstpages.domain.rsvp.entity.Rsvp;
+import com.firstpages.domain.rsvp.entity.RsvpGuestSide;
 import com.firstpages.global.response.PageResponse;
 import com.firstpages.domain.rsvp.service.RsvpService;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.GlobalExceptionHandler;
+import com.firstpages.global.security.CsrfController;
 import com.firstpages.global.security.SecurityErrorResponseWriter;
 import com.firstpages.global.security.jwt.JwtAccessDeniedHandler;
 import com.firstpages.global.security.jwt.JwtAuthenticationEntryPoint;
@@ -23,28 +26,34 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // RSVP 목록 요청의 인증과 응답 형식을 검증한다.
 @WebMvcTest(
-        controllers = RsvpController.class,
+        controllers = {RsvpController.class, CsrfController.class},
         properties = "app.cors.allowed-origins=http://localhost:5173"
 )
 @Import({
         SecurityConfig.class, GlobalExceptionHandler.class, SecurityErrorResponseWriter.class,
         JwtAuthenticationEntryPoint.class, JwtAccessDeniedHandler.class
 })
-@DisplayName("소유자용 RSVP 목록 API")
+@DisplayName("소유자용 RSVP 관리 API")
 class RsvpControllerTest {
 
     // 소유자용 RSVP 목록 경로
@@ -121,6 +130,60 @@ class RsvpControllerTest {
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(rsvpService);
+    }
+
+    // 실제 PUT 경로에서 편집 요청을 받고 수정된 항목을 반환한다.
+    @Test
+    @DisplayName("소유자의 PUT 요청은 수정된 RSVP 항목을 반환한다")
+    void updatesResponse() throws Exception {
+        Cookie auth = authenticate();
+        Cookie token = csrfCookie();
+        Rsvp rsvp = Rsvp.create(null, "이하객", RsvpGuestSide.BRIDE, "0123", false, 0, 0);
+        when(rsvpService.update(eq(USER_ID), eq(INVITATION_ID), eq(21L), any()))
+                .thenReturn(RsvpItemResponseDto.from(rsvp));
+
+        mockMvc.perform(put(URL + "/{rsvpId}", INVITATION_ID, 21L)
+                        .cookie(auth, token)
+                        .header("X-XSRF-TOKEN", token.getValue())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"guestName":"이하객","guestSide":"BRIDE","attending":false,
+                                 "companionCount":0,"mealCount":0}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.guestName").value("이하객"))
+                .andExpect(jsonPath("$.data.guestSide").value("BRIDE"))
+                .andExpect(jsonPath("$.data.attending").value(false))
+                .andExpect(jsonPath("$.data.phoneLastFour").doesNotHaveJsonPath());
+
+        verify(rsvpService).update(eq(USER_ID), eq(INVITATION_ID), eq(21L), any());
+    }
+
+    // 삭제 경로에서 숫자 RSVP ID를 서비스에 전달하는지 확인한다.
+    @Test
+    @DisplayName("소유자의 DELETE 요청에서 경로의 RSVP ID를 전달하고 200을 반환한다")
+    void deletesResponse() throws Exception {
+        Cookie auth = authenticate();
+        Cookie token = csrfCookie();
+
+        mockMvc.perform(delete(URL + "/{rsvpId}", INVITATION_ID, 21L)
+                        .cookie(auth, token)
+                        .header("X-XSRF-TOKEN", token.getValue()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        verify(rsvpService).delete(USER_ID, INVITATION_ID, 21L);
+    }
+
+    // 실제 CSRF 초기화 API에서 사용할 토큰 쿠키를 발급받는다.
+    private Cookie csrfCookie() throws Exception {
+        Cookie token = mockMvc.perform(get("/api/csrf"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getCookie("XSRF-TOKEN");
+        assertThat(token).isNotNull();
+        return token;
     }
 
     // 테스트용 인증 쿠키를 서비스에서 사용할 사용자 ID에 연결한다.

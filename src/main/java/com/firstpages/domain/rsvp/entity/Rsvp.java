@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -57,6 +58,10 @@ public class Rsvp {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     // 검증된 하객 정보와 참석 인원으로 응답을 생성
     private Rsvp(
             Invitation invitation,
@@ -95,5 +100,20 @@ public class Rsvp {
                 companionCount,
                 mealCount
         );
+    }
+
+    // 소유자가 수정한 하객 정보와 참석 인원을 반영
+    public void update(
+            String guestName,
+            RsvpGuestSide guestSide,
+            boolean attending,
+            int companionCount,
+            int mealCount
+    ) {
+        this.guestName = guestName;
+        this.guestSide = guestSide;
+        this.attending = attending;
+        this.companionCount = companionCount;
+        this.mealCount = mealCount;
     }
 }

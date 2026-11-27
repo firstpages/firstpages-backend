@@ -24,6 +24,13 @@ public enum RsvpErrorCode implements ErrorResponseCode {
             "이미 제출된 참석 응답이 있어요."
     ),
 
+    // 요청한 청첩장에 편집하거나 삭제할 참석 응답이 없는 경우
+    RSVP_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "RSVP_NOT_FOUND",
+            "참석 응답을 찾을 수 없습니다."
+    ),
+
     // 참석 여부와 동반·식사 인원의 조합이 올바르지 않은 경우
     RSVP_INVALID_COUNTS(
             HttpStatus.BAD_REQUEST,

@@ -14,6 +14,13 @@ public enum UserErrorCode implements ErrorResponseCode {
             HttpStatus.NOT_FOUND,
             "USER_NOT_FOUND",
             "사용자를 찾을 수 없습니다."
+    ),
+
+    // 카카오 연결 해제 결과를 확인하지 못한 경우
+    KAKAO_UNLINK_FAILED(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "KAKAO_UNLINK_FAILED",
+            "카카오 연결을 해제하지 못했습니다. 잠시 후 다시 시도해 주세요."
     );
 
     private final HttpStatus httpStatus;

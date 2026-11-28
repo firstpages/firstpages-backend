@@ -74,13 +74,15 @@ public class InvitationServiceImpl implements InvitationService {
             InvitationCreateRequestDto requestDto
     ) {
         // 로그인한 사용자 조회
-        User owner = userRepository.findById(userId)
+        User owner = userRepository
+                .findByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(
                         UserErrorCode.USER_NOT_FOUND
                 ));
 
         // 선택한 템플릿 조회
-        Template template = templateRepository.findById(requestDto.getTemplateId())
+        Template template = templateRepository
+                .findById(requestDto.getTemplateId())
                 .orElseThrow(() -> new BusinessException(
                         TemplateErrorCode.TEMPLATE_NOT_FOUND
                 ));

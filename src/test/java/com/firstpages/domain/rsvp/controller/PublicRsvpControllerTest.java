@@ -3,6 +3,7 @@ package com.firstpages.domain.rsvp.controller;
 import com.firstpages.domain.rsvp.dto.request.RsvpCreateRequestDto;
 import com.firstpages.domain.rsvp.exception.RsvpErrorCode;
 import com.firstpages.domain.rsvp.service.RsvpService;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.exception.GlobalExceptionHandler;
@@ -67,6 +68,9 @@ class PublicRsvpControllerTest {
     // JWT 보안 필터의 의존성을 제공한다.
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     // OAuth2 보안 필터의 사용자 조회 의존성을 제공한다.
     @MockitoBean

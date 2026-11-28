@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,40 +28,46 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     // 카카오 사용자 정보 조회 및 회원 처리
     @Override
     @Transactional
-    public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+    public OAuth2User loadUser(OAuth2UserRequest request) {
+        // 카카오 사용자 정보 조회와 회원번호 추출
+        OAuth2User oAuth2User = delegate.loadUser(request);
+        String providerId = extractProviderId(oAuth2User.getAttributes());
 
-        // 카카오 사용자 정보 API 호출
-        OAuth2User oauth2User = delegate.loadUser(userRequest);
+        Optional<User> existing = userRepository.findByProviderAndProviderIdForUpdate(
+                SocialProvider.KAKAO,
+                providerId
+        );
 
-        Map<String, Object> attributes = oauth2User.getAttributes();
+        User user;
 
-        // 카카오 사용자 고유 ID 추출
-        String providerId = extractProviderId(attributes);
+        if (existing.isPresent()) {
+            user = existing.get();
+            String nickname = extractNickname(oAuth2User.getAttributes());
 
-        // 카카오 프로필에서 닉네임 추출
-        String nickname = extractNickname(attributes);
+            if (user.getNickname() == null && nickname != null) {
+                user.updateNickname(nickname);
+            }
+        } else {
+            // 회원이 사라진 경우 기존 카카오 토큰으로 사용자 정보 재확인
+            oAuth2User = delegate.loadUser(request);
 
-        User user = userRepository
-                .findByProviderAndProviderId(
-                        SocialProvider.KAKAO,
-                        providerId
-                )
-                .orElseGet(() -> userRepository.save(
-                        User.create(
-                                SocialProvider.KAKAO,
-                                providerId,
-                                nickname
-                        )
-                ));
+            // 최초 조회와 재조회 응답의 카카오 회원번호 비교
+            if (!providerId.equals(extractProviderId(oAuth2User.getAttributes()))) {
+                throw new OAuth2AuthenticationException(new OAuth2Error("invalid_kakao_user_id"));
+            }
 
-        // 기존 사용자의 닉네임이 없다면 최초 한 번 보완
-        if (user.getNickname() == null && nickname != null) {
-            user.updateNickname(nickname);
+            // 검증된 카카오 정보로 새 내부 회원 생성
+            user = userRepository.save(User.create(
+                    SocialProvider.KAKAO,
+                    providerId,
+                    extractNickname(oAuth2User.getAttributes())
+            ));
         }
 
+        // 내부 회원 ID를 가진 OAuth 인증 주체 반환
         return new CustomOAuth2User(
                 user.getId(),
-                oauth2User
+                oAuth2User
         );
     }
 

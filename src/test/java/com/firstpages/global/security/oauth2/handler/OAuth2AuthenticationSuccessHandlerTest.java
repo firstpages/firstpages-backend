@@ -1,24 +1,27 @@
 
 package com.firstpages.global.security.oauth2.handler;
 
-import com.firstpages.domain.auth.service.RefreshTokenService;
-import com.firstpages.global.security.jwt.JwtProvider;
+import com.firstpages.domain.auth.dto.response.AuthTokenPairDto;
+import com.firstpages.domain.auth.service.LoginTokenIssuer;
 import com.firstpages.global.security.oauth2.CustomOAuth2User;
 import com.firstpages.global.security.oauth2.OAuth2CookieManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-// OAuth2 로그인 성공 시 JWT 발급, 저장, 쿠키 설정 및 리다이렉트 검증
+// OAuth2 로그인 성공 시 토큰 발급 위임, 쿠키 설정 및 리다이렉트 검증
 @ExtendWith(MockitoExtension.class)
 class OAuth2AuthenticationSuccessHandlerTest {
 
@@ -31,10 +34,10 @@ class OAuth2AuthenticationSuccessHandlerTest {
             "http://localhost:5173/auth/callback";
 
     @Mock
-    private JwtProvider jwtProvider;
+    private LoginTokenIssuer tokenIssuer;
 
     @Mock
-    private RefreshTokenService refreshTokenService;
+    private OAuth2AuthenticationFailureHandler failureHandler;
 
     @Mock
     private OAuth2CookieManager cookieManager;
@@ -50,46 +53,10 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @BeforeEach
     void setUp() {
         successHandler = new OAuth2AuthenticationSuccessHandler(
-                jwtProvider,
+                tokenIssuer,
                 cookieManager,
-                refreshTokenService,
+                failureHandler,
                 REDIRECT_URL
-        );
-    }
-
-    @Test
-    @DisplayName("로그인 성공 시 Access Token과 Refresh Token을 발급한다")
-    void issueTokensOnSuccess() throws Exception {
-        // given
-        setUpAuthentication();
-
-        // when
-        performLoginSuccess();
-
-        // then
-        verify(jwtProvider).createAccessToken(USER_ID);
-        verify(jwtProvider).createRefreshToken(USER_ID);
-    }
-
-    @Test
-    @DisplayName("로그인 성공 시 Refresh Token을 Redis에 저장한다")
-    void saveRefreshTokenOnSuccess() throws Exception {
-        // given
-        setUpAuthentication();
-
-        // when
-        performLoginSuccess();
-
-        // then
-        verify(refreshTokenService).save(
-                USER_ID,
-                REFRESH_TOKEN
-        );
-
-        // 저장은 한 번만 수행되어야 함
-        verify(refreshTokenService, times(1)).save(
-                USER_ID,
-                REFRESH_TOKEN
         );
     }
 
@@ -163,54 +130,40 @@ class OAuth2AuthenticationSuccessHandlerTest {
     }
 
     @Test
-    @DisplayName("로그인 성공 시 Refresh Token 저장 후 쿠키를 설정한다")
-    void saveRefreshTokenBeforeAddingCookies() throws Exception {
-        // given
+    @DisplayName("토큰 발급을 마친 뒤 인증 쿠키를 설정한다")
+    void issuesTokensBeforeAddingCookies() throws Exception {
         setUpAuthentication();
 
-        // when
-        performLoginSuccess();
+        MockHttpServletResponse response = performLoginSuccess();
 
-        // then
-        var inOrder = inOrder(
-                jwtProvider,
-                refreshTokenService,
-                cookieManager
-        );
-
-        // JWT 발급
-        inOrder.verify(jwtProvider)
-                .createAccessToken(USER_ID);
-
-        inOrder.verify(jwtProvider)
-                .createRefreshToken(USER_ID);
-
-        // Refresh Token 저장
-        inOrder.verify(refreshTokenService)
-                .save(USER_ID, REFRESH_TOKEN);
-
-        // 쿠키 설정
-        inOrder.verify(cookieManager)
-                .addTokenCookies(
-                        any(),
-                        eq(ACCESS_TOKEN),
-                        eq(REFRESH_TOKEN)
-                );
+        InOrder order = inOrder(tokenIssuer, cookieManager);
+        order.verify(tokenIssuer).issue(USER_ID);
+        order.verify(cookieManager).addTokenCookies(response, ACCESS_TOKEN, REFRESH_TOKEN);
     }
 
-    // OAuth2 로그인 성공 시 반환되는 사용자 정보 설정
+    @Test
+    @DisplayName("발급 직전에 탈퇴한 회원은 로그인 실패 핸들러로 전달한다")
+    void delegatesFailureWhenUserWasDeleted() throws Exception {
+        when(authentication.getPrincipal()).thenReturn(customOAuth2User);
+        when(customOAuth2User.getUserId()).thenReturn(USER_ID);
+        OAuth2AuthenticationException exception =
+                new OAuth2AuthenticationException(new OAuth2Error("account_unavailable"));
+        when(tokenIssuer.issue(USER_ID)).thenThrow(exception);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        successHandler.onAuthenticationSuccess(request, response, authentication);
+
+        verify(failureHandler).onAuthenticationFailure(request, response, exception);
+        verifyNoInteractions(cookieManager);
+        assertNull(response.getRedirectedUrl());
+    }
+
+    // OAuth 사용자 정보와 토큰 발급 결과 준비
     private void setUpAuthentication() {
-        when(authentication.getPrincipal())
-                .thenReturn(customOAuth2User);
-
-        when(customOAuth2User.getUserId())
-                .thenReturn(USER_ID);
-
-        when(jwtProvider.createAccessToken(USER_ID))
-                .thenReturn(ACCESS_TOKEN);
-
-        when(jwtProvider.createRefreshToken(USER_ID))
-                .thenReturn(REFRESH_TOKEN);
+        when(authentication.getPrincipal()).thenReturn(customOAuth2User);
+        when(customOAuth2User.getUserId()).thenReturn(USER_ID);
+        when(tokenIssuer.issue(USER_ID)).thenReturn(new AuthTokenPairDto(ACCESS_TOKEN, REFRESH_TOKEN));
     }
 
     // 로그인 성공 핸들러를 호출하고 HTTP 응답 반환

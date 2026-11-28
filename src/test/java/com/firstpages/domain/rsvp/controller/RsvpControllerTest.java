@@ -6,6 +6,7 @@ import com.firstpages.domain.rsvp.entity.Rsvp;
 import com.firstpages.domain.rsvp.entity.RsvpGuestSide;
 import com.firstpages.global.response.PageResponse;
 import com.firstpages.domain.rsvp.service.RsvpService;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.GlobalExceptionHandler;
 import com.firstpages.global.security.CsrfController;
@@ -79,6 +80,9 @@ class RsvpControllerTest {
     // JWT 보안 필터의 의존성을 제공한다.
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     // OAuth2 보안 필터의 사용자 조회 의존성을 제공한다.
     @MockitoBean
@@ -189,6 +193,7 @@ class RsvpControllerTest {
     // 테스트용 인증 쿠키를 서비스에서 사용할 사용자 ID에 연결한다.
     private Cookie authenticate() {
         when(jwtProvider.getUserId(ACCESS_TOKEN, JwtTokenType.ACCESS)).thenReturn(USER_ID);
+        when(userRepository.existsById(USER_ID)).thenReturn(true);
         return new Cookie(OAuth2CookieManager.ACCESS_TOKEN, ACCESS_TOKEN);
     }
 }

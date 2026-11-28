@@ -8,4 +8,7 @@ public interface UserService {
 
     // 현재 로그인한 사용자의 정보를 조회
     UserMeResponseDto getMyInfo(Long userId);
+
+    // 로그인한 사용자의 계정을 삭제
+    void withdraw(Long userId);
 }

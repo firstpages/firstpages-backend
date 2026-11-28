@@ -2,12 +2,14 @@ package com.firstpages.domain.auth.service;
 
 import com.firstpages.domain.auth.dto.response.AuthTokenPairDto;
 import com.firstpages.domain.auth.exception.AuthErrorCode;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.security.jwt.JwtProvider;
 import com.firstpages.global.security.jwt.JwtTokenType;
 import com.firstpages.global.security.oauth2.OAuth2CookieManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 // Refresh Token 검증과 JWT 재발급 흐름을 담당
 @Service
@@ -18,16 +20,16 @@ public class AuthServiceImpl implements AuthService {
 
     private final RefreshTokenService refreshTokenService;
 
+    // 토큰 재발급과 회원탈퇴의 순서를 정하기 위한 회원 저장소
+    private final UserRepository userRepository;
+
     // Refresh Token으로 새 Access Token과 Refresh Token을 발급
-
     @Override
+    @Transactional
     public AuthTokenPairDto reissue(String refreshToken) {
-
         // Refresh Token이 없으면 재발급 요청 거부
         if (refreshToken == null || refreshToken.isBlank()) {
-            throw new BusinessException(
-                    AuthErrorCode.REFRESH_TOKEN_NOT_FOUND
-            );
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND);
         }
 
         // JWT의 서명, 만료시간, REFRESH 유형을 검증하고 사용자 ID 추출
@@ -35,6 +37,11 @@ public class AuthServiceImpl implements AuthService {
                 refreshToken,
                 JwtTokenType.REFRESH
         );
+
+        // 회원이 삭제됐으면 Redis에 키가 남아 있어도 재발급 차단
+        userRepository
+                .findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN));
 
         // 사용자 ID를 기반으로 새로운 JWT 발급
         String newAccessToken = jwtProvider.createAccessToken(userId);

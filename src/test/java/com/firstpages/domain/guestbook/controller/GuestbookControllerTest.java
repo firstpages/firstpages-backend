@@ -4,6 +4,7 @@ import com.firstpages.domain.guestbook.dto.response.GuestbookItemResponseDto;
 import com.firstpages.domain.guestbook.exception.GuestbookErrorCode;
 import com.firstpages.domain.guestbook.service.GuestbookService;
 import com.firstpages.domain.invitation.exception.InvitationErrorCode;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.exception.GlobalExceptionHandler;
@@ -77,6 +78,9 @@ class GuestbookControllerTest {
     // JWT 보안 필터의 의존성을 제공한다.
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     // OAuth2 보안 필터의 사용자 조회 의존성을 제공한다.
     @MockitoBean
@@ -213,6 +217,7 @@ class GuestbookControllerTest {
     // 실제 보안 필터가 테스트 토큰을 사용자 ID로 해석하도록 설정한다.
     private Cookie authenticate() {
         when(jwtProvider.getUserId(ACCESS_TOKEN, JwtTokenType.ACCESS)).thenReturn(USER_ID);
+        when(userRepository.existsById(USER_ID)).thenReturn(true);
         return new Cookie(OAuth2CookieManager.ACCESS_TOKEN, ACCESS_TOKEN);
     }
 }

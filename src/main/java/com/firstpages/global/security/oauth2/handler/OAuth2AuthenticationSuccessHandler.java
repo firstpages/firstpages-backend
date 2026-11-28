@@ -1,5 +1,7 @@
 package com.firstpages.global.security.oauth2.handler;
 
+import com.firstpages.domain.auth.dto.response.AuthTokenPairDto;
+import com.firstpages.domain.auth.service.LoginTokenIssuer;
 import com.firstpages.domain.auth.service.RefreshTokenService;
 import com.firstpages.global.security.jwt.JwtProvider;
 import com.firstpages.global.security.oauth2.CustomOAuth2User;
@@ -11,6 +13,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
@@ -20,26 +23,28 @@ import java.io.IOException;
 @Component
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtProvider jwtProvider;
+    // 서비스 토큰 발급 계약
+    private final LoginTokenIssuer tokenIssuer;
 
-    private final OAuth2CookieManager oAuth2CookieManager;
+    // 발급된 토큰을 브라우저 쿠키로 전달하는 컴포넌트
+    private final OAuth2CookieManager cookieManager;
 
-    private RefreshTokenService refreshTokenService;
+    // 로그인 완료 단계의 인증 실패를 처리하는 핸들러
+    private final OAuth2AuthenticationFailureHandler failureHandler;
 
     public OAuth2AuthenticationSuccessHandler(
-            JwtProvider jwtProvider,
-            OAuth2CookieManager oAuth2CookieManager,
-            RefreshTokenService refreshTokenService,
+            LoginTokenIssuer tokenIssuer,
+            OAuth2CookieManager cookieManager,
+            OAuth2AuthenticationFailureHandler failureHandler,
             @Value("${app.oauth2.success-redirect-uri}") String successRedirectUri
     ) {
-        this.jwtProvider = jwtProvider;
-        this.oAuth2CookieManager = oAuth2CookieManager;
-        this.refreshTokenService = refreshTokenService;
+        // 토큰 발급과 HTTP 응답 처리에 사용할 의존성 저장
+        this.tokenIssuer = tokenIssuer;
+        this.cookieManager = cookieManager;
+        this.failureHandler = failureHandler;
 
-        // 로그인 성공 이후 이동할 기본 URL
+        // 로그인 성공 시 설정된 주소로 이동
         setDefaultTargetUrl(successRedirectUri);
-
-        // 저장된 요청이나 URL 파라미터와 관계없이 지정한 URL로 이동
         setAlwaysUseDefaultTargetUrl(true);
     }
 
@@ -50,32 +55,39 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException, ServletException {
+        // OAuth 인증 주체에서 내부 회원 ID 조회
+        CustomOAuth2User principal = (CustomOAuth2User) authentication.getPrincipal();
 
-        // OAuth2 Principal에서 서비스 내부 사용자 ID 조회
-        CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        // 발급 결과를 쿠키에 전달하기 위한 변수
+        AuthTokenPairDto tokens;
 
-        Long userId = oAuth2User.getUserId();
+        try {
+            // 회원 존재를 재확인하고 서비스 토큰 발급
+            tokens = tokenIssuer.issue(principal.getUserId());
+        } catch (OAuth2AuthenticationException exception) {
+            // 인증 컨텍스트를 정리하고 기존 로그인 실패 처리로 위임
+            SecurityContextHolder.clearContext();
 
-        // 자체 JWT 발급
-        String accessToken = jwtProvider.createAccessToken(userId);
-        String refreshToken = jwtProvider.createRefreshToken(userId);
+            failureHandler.onAuthenticationFailure(
+                    request,
+                    response,
+                    exception
+            );
 
-        // Refresh Token을 쿠키로 전달하기 전에 Redis에 저장
-        refreshTokenService.save(userId, refreshToken);
+            return;
+        }
 
-        // JWT를 HttpOnly 쿠키에 저장하여 클라이언트로 전달
-        oAuth2CookieManager.addTokenCookies(
+        // 발급이 끝난 토큰을 브라우저 인증 쿠키로 전달
+        cookieManager.addTokenCookies(
                 response,
-                accessToken,
-                refreshToken
+                tokens.getAccessToken(),
+                tokens.getRefreshToken()
         );
 
-        // OAuth2 인증 과정에서 사용한 임시 HTTP 세션 무효화
+        // OAuth 로그인에 사용한 임시 세션 종료
         HttpSession session = request.getSession(false);
 
-        // 기존 세션 제거
         if (session != null) {
-            // 해당 HTTP 세션을 무효화
             session.invalidate();
         }
 

@@ -13,6 +13,7 @@ import com.firstpages.domain.invitation.exception.InvitationErrorCode;
 import com.firstpages.domain.invitation.service.InvitationService;
 import com.firstpages.domain.template.entity.Template;
 import com.firstpages.domain.template.exception.TemplateErrorCode;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.exception.GlobalExceptionHandler;
@@ -107,6 +108,9 @@ class InvitationControllerTest {
     // 실제 보안 설정을 구성하는 JWT 관련 의존성
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private SecurityErrorResponseWriter responseWriter;

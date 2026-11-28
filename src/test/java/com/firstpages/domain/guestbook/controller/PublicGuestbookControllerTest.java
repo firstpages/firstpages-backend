@@ -4,6 +4,7 @@ import com.firstpages.domain.guestbook.dto.request.GuestbookCreateRequestDto;
 import com.firstpages.domain.guestbook.exception.GuestbookErrorCode;
 import com.firstpages.domain.guestbook.service.GuestbookService;
 import com.firstpages.domain.invitation.exception.InvitationErrorCode;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.exception.GlobalExceptionHandler;
@@ -73,6 +74,9 @@ class PublicGuestbookControllerTest {
     // JWT 보안 필터의 의존성을 제공한다.
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     // OAuth2 보안 필터의 사용자 조회 의존성을 제공한다.
     @MockitoBean

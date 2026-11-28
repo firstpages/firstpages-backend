@@ -6,6 +6,7 @@ import com.firstpages.domain.invitation.entity.InvitationDocument;
 import com.firstpages.domain.invitation.exception.InvitationErrorCode;
 import com.firstpages.domain.invitation.service.InvitationService;
 import com.firstpages.domain.template.entity.Template;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.exception.GlobalExceptionHandler;
@@ -56,6 +57,9 @@ class PublicInvitationControllerTest {
     // 실제 보안 필터 체인을 구성하는 JWT 의존성
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private SecurityErrorResponseWriter responseWriter;

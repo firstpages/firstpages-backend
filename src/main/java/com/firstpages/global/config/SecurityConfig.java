@@ -1,5 +1,6 @@
 package com.firstpages.global.config;
 
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.security.SecurityErrorResponseWriter;
 import com.firstpages.global.security.jwt.JwtAccessDeniedHandler;
 import com.firstpages.global.security.jwt.JwtAuthenticationEntryPoint;
@@ -74,12 +75,14 @@ public class SecurityConfig {
     public SecurityFilterChain apiSecurityFilterChain(
             HttpSecurity http,
             JwtProvider jwtProvider,
+            UserRepository userRepository,
             SecurityErrorResponseWriter responseWriter,
             JwtAuthenticationEntryPoint authenticationEntryPoint,
             JwtAccessDeniedHandler accessDeniedHandler
     ) throws Exception {
 
         JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(
+                userRepository,
                 jwtProvider,
                 responseWriter
         );

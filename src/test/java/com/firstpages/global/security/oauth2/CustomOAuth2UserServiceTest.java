@@ -39,7 +39,7 @@ class CustomOAuth2UserServiceTest {
         UserRepository userRepository = mock(UserRepository.class);
         User savedUser = mock(User.class);
 
-        when(userRepository.findByProviderAndProviderId(
+        when(userRepository.findByProviderAndProviderIdForUpdate(
                 SocialProvider.KAKAO,
                 KAKAO_PROVIDER_ID
         )).thenReturn(Optional.empty());
@@ -57,7 +57,7 @@ class CustomOAuth2UserServiceTest {
         assertEquals(USER_ID, principal.getUserId());
 
         // 카카오 사용자 ID를 이용해 기존 사용자를 검색했는지 검증
-        verify(userRepository).findByProviderAndProviderId(
+        verify(userRepository).findByProviderAndProviderIdForUpdate(
                 SocialProvider.KAKAO,
                 KAKAO_PROVIDER_ID
         );
@@ -82,7 +82,7 @@ class CustomOAuth2UserServiceTest {
 
         when(existingUser.getId()).thenReturn(USER_ID);
 
-        when(userRepository.findByProviderAndProviderId(
+        when(userRepository.findByProviderAndProviderIdForUpdate(
                 SocialProvider.KAKAO,
                 KAKAO_PROVIDER_ID
         )).thenReturn(Optional.of(existingUser));
@@ -106,7 +106,7 @@ class CustomOAuth2UserServiceTest {
 
         when(existingUser.getId()).thenReturn(USER_ID);
 
-        when(userRepository.findByProviderAndProviderId(
+        when(userRepository.findByProviderAndProviderIdForUpdate(
                 SocialProvider.KAKAO,
                 KAKAO_PROVIDER_ID
         )).thenReturn(Optional.of(existingUser));

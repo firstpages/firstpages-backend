@@ -1,6 +1,7 @@
 
 package com.firstpages.global.security.jwt;
 
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.response.code.JwtErrorCode;
 import com.firstpages.global.security.SecurityErrorResponseWriter;
@@ -29,6 +30,9 @@ class JwtAuthenticationFilterTest {
 
     private static final Long USER_ID = 9L;
     private static final String ACCESS_TOKEN = "valid-access-token";
+
+    @Mock
+    private UserRepository userRepository;
 
     @Mock
     private JwtProvider jwtProvider;
@@ -73,6 +77,7 @@ class JwtAuthenticationFilterTest {
                 ACCESS_TOKEN,
                 JwtTokenType.ACCESS
         )).thenReturn(USER_ID);
+        when(userRepository.existsById(USER_ID)).thenReturn(true);
 
         // when
         jwtAuthenticationFilter.doFilter(
@@ -285,6 +290,20 @@ class JwtAuthenticationFilterTest {
         // then
         verifyNoInteractions(jwtProvider, responseWriter);
         verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    @DisplayName("삭제된 회원의 유효한 Access Token을 거절한다")
+    void rejectsDeletedUser() throws Exception {
+        request.setCookies(accessTokenCookie(ACCESS_TOKEN));
+        when(jwtProvider.getUserId(ACCESS_TOKEN, JwtTokenType.ACCESS)).thenReturn(USER_ID);
+        when(userRepository.existsById(USER_ID)).thenReturn(false);
+
+        jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(responseWriter).write(response, JwtErrorCode.INVALID_TOKEN);
+        verifyNoInteractions(filterChain);
     }
 
     // 테스트 요청에 Access Token 쿠키 추가

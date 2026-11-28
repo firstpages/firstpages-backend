@@ -4,6 +4,7 @@ package com.firstpages.domain.auth.controller;
 import com.firstpages.domain.auth.dto.response.AuthTokenPairDto;
 import com.firstpages.domain.auth.exception.AuthErrorCode;
 import com.firstpages.domain.auth.service.AuthService;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.config.SecurityConfig;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.security.SecurityErrorResponseWriter;
@@ -66,6 +67,9 @@ class AuthControllerTest {
     // 실제 SecurityConfig를 구성하기 위한 JWT 의존성
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private SecurityErrorResponseWriter responseWriter;

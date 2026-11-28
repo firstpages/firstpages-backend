@@ -2,6 +2,8 @@ package com.firstpages.domain.auth.service;
 
 import com.firstpages.domain.auth.dto.response.AuthTokenPairDto;
 import com.firstpages.domain.auth.exception.AuthErrorCode;
+import com.firstpages.domain.user.entity.User;
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.response.code.JwtErrorCode;
 import com.firstpages.global.security.jwt.JwtProvider;
@@ -12,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -25,6 +29,9 @@ class AuthServiceImplTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -44,6 +51,7 @@ class AuthServiceImplTest {
                 oldRefreshToken,
                 JwtTokenType.REFRESH
         )).thenReturn(userId);
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(mock(User.class)));
 
         // 새 JWT 생성 결과 설정
         when(jwtProvider.createAccessToken(userId))
@@ -155,6 +163,7 @@ class AuthServiceImplTest {
                 oldRefreshToken,
                 JwtTokenType.REFRESH
         )).thenReturn(userId);
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(mock(User.class)));
 
         when(jwtProvider.createAccessToken(userId))
                 .thenReturn(newAccessToken);
@@ -180,6 +189,23 @@ class AuthServiceImplTest {
                 AuthErrorCode.INVALID_REFRESH_TOKEN,
                 exception.getErrorCode()
         );
+    }
+
+    @Test
+    @DisplayName("삭제된 회원은 Redis에 접근하기 전에 재발급을 거절한다")
+    void rejectsDeletedUser() {
+        Long userId = 9L;
+        String token = "old-refresh-token";
+        when(jwtProvider.getUserId(token, JwtTokenType.REFRESH)).thenReturn(userId);
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.empty());
+
+        BusinessException exception = assertThrows(
+                BusinessException.class, () -> authService.reissue(token)
+        );
+
+        assertEquals(AuthErrorCode.INVALID_REFRESH_TOKEN, exception.getErrorCode());
+        verifyNoInteractions(refreshTokenService);
+        verify(jwtProvider, never()).createAccessToken(userId);
     }
 
     @Test

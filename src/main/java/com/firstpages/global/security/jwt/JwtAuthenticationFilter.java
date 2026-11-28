@@ -1,6 +1,7 @@
 package com.firstpages.global.security.jwt;
 
 
+import com.firstpages.domain.user.repository.UserRepository;
 import com.firstpages.global.exception.BusinessException;
 import com.firstpages.global.response.code.JwtErrorCode;
 import com.firstpages.global.security.SecurityErrorResponseWriter;
@@ -29,6 +30,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String AUTH_LOGOUT = "/api/auth/logout";
 
+    // JWT의 내부 회원 ID가 아직 존재하는지 확인
+    private final UserRepository userRepository;
+
     private final JwtProvider jwtProvider;
 
     private final SecurityErrorResponseWriter responseWriter;
@@ -55,6 +59,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     token,
                     JwtTokenType.ACCESS
             );
+
+            // 삭제된 회원의 Access Token을 인증 객체 생성 전에 차단
+            if (!userRepository.existsById(userId)) {
+                throw new BusinessException(JwtErrorCode.INVALID_TOKEN);
+            }
 
             // 인증 객체 생성
             // Spring Security는 Authentication 객체를 통해 인증 상태를 관리

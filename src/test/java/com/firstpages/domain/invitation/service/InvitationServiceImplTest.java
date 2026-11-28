@@ -145,7 +145,7 @@ class InvitationServiceImplTest {
     @DisplayName("선택 가능한 템플릿으로 청첩장과 작성본을 생성한다")
     void createSuccess() {
         // given
-        when(userRepository.findById(USER_ID))
+        when(userRepository.findByIdForUpdate(USER_ID))
                 .thenReturn(Optional.of(owner));
 
         when(templateRepository.findById(TEMPLATE_ID))
@@ -223,7 +223,7 @@ class InvitationServiceImplTest {
     @DisplayName("청첩장 생성 시 사용자가 없으면 USER_NOT_FOUND 예외가 발생한다")
     void createFailsWhenUserNotFound() {
         // given
-        when(userRepository.findById(USER_ID))
+        when(userRepository.findByIdForUpdate(USER_ID))
                 .thenReturn(Optional.empty());
 
         // when
@@ -251,7 +251,7 @@ class InvitationServiceImplTest {
     @DisplayName("템플릿이 없으면 TEMPLATE_NOT_FOUND 예외가 발생한다")
     void createFailsWhenTemplateNotFound() {
         // given
-        when(userRepository.findById(USER_ID))
+        when(userRepository.findByIdForUpdate(USER_ID))
                 .thenReturn(Optional.of(owner));
 
         when(templateRepository.findById(TEMPLATE_ID))
@@ -287,7 +287,7 @@ class InvitationServiceImplTest {
                 false
         );
 
-        when(userRepository.findById(USER_ID))
+        when(userRepository.findByIdForUpdate(USER_ID))
                 .thenReturn(Optional.of(owner));
 
         when(templateRepository.findById(TEMPLATE_ID))
@@ -317,7 +317,7 @@ class InvitationServiceImplTest {
     @DisplayName("작성본 저장에 실패하면 발생한 예외를 그대로 전달한다")
     void createPropagatesDocumentSaveFailure() {
         // given
-        when(userRepository.findById(USER_ID))
+        when(userRepository.findByIdForUpdate(USER_ID))
                 .thenReturn(Optional.of(owner));
 
         when(templateRepository.findById(TEMPLATE_ID))

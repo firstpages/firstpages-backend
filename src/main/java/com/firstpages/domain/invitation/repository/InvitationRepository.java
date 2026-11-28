@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 // 청첩장 관리 정보의 데이터 접근을 담당하는 리포지토리
@@ -29,12 +30,6 @@ public interface InvitationRepository extends JpaRepository<Invitation, Long> {
     Optional<Invitation> findByOwnerIdAndId(
             Long ownerId,
             Long id
-    );
-
-    // 특정 청첩장에 대한 사용자 소유권 확인
-    boolean existsByIdAndOwnerId(
-            Long invitationId,
-            Long ownerId
     );
 
     // 소유자의 청첩장을 조회하면서 낙관적 락과 버전 증가를 적용
@@ -72,5 +67,23 @@ public interface InvitationRepository extends JpaRepository<Invitation, Long> {
             """)
     Optional<Invitation> findByPublicIdForUpdate(
             @Param("publicId") String publicId
+    );
+
+    // 사용자의 청첩장을 ID 순서로 조회하고 행을 잠그기
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select invitation
+            from Invitation invitation
+            where invitation.owner.id = :userId
+            order by invitation.id
+            """)
+    List<Invitation> findAllByOwnerIdForUpdate(
+            @Param("userId") Long userId
+    );
+
+    // 특정 청첩장에 대한 사용자 소유권 확인
+    boolean existsByIdAndOwnerId(
+            Long invitationId,
+            Long ownerId
     );
 }

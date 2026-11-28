@@ -60,7 +60,8 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
     // Redis에서 사용자 ID에 해당하는 Refresh Token 해시값 조회
     @Override
     public Optional<String> findByUserId(Long userId) {
-        String tokenHash = redisTemplate.opsForValue()
+        String tokenHash = redisTemplate
+                .opsForValue()
                 .get(generateKey(userId));
 
         return Optional.ofNullable(tokenHash);

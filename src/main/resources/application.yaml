@@ -37,6 +37,9 @@ logging:
     org.hibernate: WARN
 
 app:
+  kakao:
+    service-app-admin-key : ${KAKAO_SERVICE_APP_ADMIN_KEY}
+
   invitation-photos:
     region: ${INVITATION_PHOTOS_REGION}
     bucket: ${INVITATION_PHOTOS_BUCKET}
